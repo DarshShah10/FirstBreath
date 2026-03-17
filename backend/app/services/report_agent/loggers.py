@@ -11,7 +11,7 @@ import logging
 from typing import Dict, Any, Optional
 from datetime import datetime
 
-from ....config import Config
+from ...config import Config
 
 
 class ReportLogger:

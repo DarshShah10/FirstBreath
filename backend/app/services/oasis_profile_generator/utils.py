@@ -13,13 +13,13 @@ import re
 import time
 from typing import Any, Dict, List, Optional
 
-from ....utils.logger import get_logger
+from ...utils.logger import get_logger
 from ..zep_entity_reader import EntityNode
 from .constants import (
-    COUNTRIES,
+    BASE_LOCATIONS,
     GROUP_ENTITY_TYPES,
     INDIVIDUAL_ENTITY_TYPES,
-    MBTI_TYPES,
+    UNIT_TYPES,
 )
 
 logger = get_logger('mirofish.oasis_profile')
@@ -390,85 +390,85 @@ def generate_profile_rule_based(
     entity_summary: str,
     entity_attributes: Dict[str, Any],
 ) -> Dict[str, Any]:
-    """Generate a basic persona using rules (fallback when LLM is unavailable)."""
+    """Generate a basic emergency unit profile using rules (fallback when LLM is unavailable)."""
     entity_type_lower = entity_type.lower()
 
-    if entity_type_lower in ["student", "alumni"]:
+    if entity_type_lower in ["ambulance", "paramedic", "medic", "driver"]:
         return {
-            "bio": f"{entity_type} with interests in academics and social issues.",
+            "bio": f"{entity_name} | ALS Unit | Status: Available | Equipped: Defibrillator, O2, IV Kit",
             "persona": (
-                f"{entity_name} is a {entity_type.lower()} who is actively engaged in academic "
-                f"and social discussions. They enjoy sharing perspectives and connecting with peers."
+                f"{entity_name} is an Advanced Life Support ambulance unit stationed at "
+                f"{random.choice(BASE_LOCATIONS)}. Response time approximately "
+                f"{random.randint(5, 15)} minutes. Equipped for cardiac and trauma emergencies."
             ),
-            "age": random.randint(18, 30),
-            "gender": random.choice(["male", "female"]),
-            "mbti": random.choice(MBTI_TYPES),
-            "country": random.choice(COUNTRIES),
-            "profession": "Student",
-            "interested_topics": ["Education", "Social Issues", "Technology"],
+            "age": random.randint(5, 15),
+            "gender": "male",
+            "mbti": "ALS_Ambulance",
+            "country": random.choice(BASE_LOCATIONS),
+            "profession": "Advanced Life Support Paramedic",
+            "interested_topics": ["Defibrillator", "Advanced_Airway", "IV_Access", "O2_Supply"],
         }
 
-    elif entity_type_lower in ["publicfigure", "expert", "faculty"]:
+    elif entity_type_lower in ["doctor", "surgeon", "physician"]:
         return {
-            "bio": "Expert and thought leader in their field.",
+            "bio": f"Dr. {entity_name} | On Duty | Specialty: Emergency Medicine | Available",
             "persona": (
-                f"{entity_name} is a recognized {entity_type.lower()} who shares insights and "
-                f"opinions on important matters. They are known for their expertise and influence "
-                f"in public discourse."
+                f"Dr. {entity_name} is an emergency physician currently on duty at "
+                f"{random.choice(BASE_LOCATIONS)}. Specializes in trauma and critical care. "
+                f"Response time approximately {random.randint(2, 10)} minutes."
             ),
-            "age": random.randint(35, 60),
-            "gender": random.choice(["male", "female"]),
-            "mbti": random.choice(["ENTJ", "INTJ", "ENTP", "INTP"]),
-            "country": random.choice(COUNTRIES),
-            "profession": entity_attributes.get("occupation", "Expert"),
-            "interested_topics": ["Politics", "Economics", "Culture & Society"],
+            "age": random.randint(2, 10),
+            "gender": "male",
+            "mbti": "Doctor_Surgeon",
+            "country": random.choice(BASE_LOCATIONS),
+            "profession": entity_attributes.get("specialty", "Emergency Medicine"),
+            "interested_topics": ["Trauma_Care", "Critical_Care", "Resuscitation"],
         }
 
-    elif entity_type_lower in ["mediaoutlet", "socialmediaplatform"]:
+    elif entity_type_lower in ["dispatcher", "responder"]:
         return {
-            "bio": f"Official account for {entity_name}. News and updates.",
+            "bio": f"{entity_name} | Dispatch Control | Status: Active | All Channels Open",
             "persona": (
-                f"{entity_name} is a media entity that reports news and facilitates public "
-                f"discourse. The account shares timely updates and engages with the audience "
-                f"on current events."
+                f"{entity_name} is an emergency dispatcher at the central control room. "
+                f"Coordinates all ambulance and hospital communications. "
+                f"Immediate response capability across all city sectors."
             ),
-            "age": 30,       # virtual age for institutional accounts
-            "gender": "other",  # institutional accounts use "other"
-            "mbti": "ISTJ",  # institutional style: rigorous and conservative
-            "country": "中国",
-            "profession": "Media",
-            "interested_topics": ["General News", "Current Events", "Public Affairs"],
+            "age": 1,
+            "gender": "male",
+            "mbti": "Dispatcher",
+            "country": "Central Dispatch Hub",
+            "profession": "Emergency Dispatch Coordinator",
+            "interested_topics": ["Radio_Coordination", "Route_Optimization", "Unit_Allocation"],
         }
 
-    elif entity_type_lower in ["university", "governmentagency", "ngo", "organization"]:
+    elif entity_type_lower in ["hospital", "bloodbank", "operatingtheater", "dispatchcenter", "facility"]:
         return {
-            "bio": f"Official account of {entity_name}.",
+            "bio": f"{entity_name} | Facility | OT: Available | ICU: Available | Blood: Stocked",
             "persona": (
-                f"{entity_name} is an institutional entity that communicates official positions, "
-                f"announcements, and engages with stakeholders on relevant matters."
+                f"{entity_name} is an emergency medical facility at {random.choice(BASE_LOCATIONS)}. "
+                f"Current capacity: available. Operating theaters ready. Blood bank stocked."
             ),
-            "age": 30,       # virtual age for institutional accounts
-            "gender": "other",  # institutional accounts use "other"
-            "mbti": "ISTJ",  # institutional style: rigorous and conservative
-            "country": "中国",
-            "profession": entity_type,
-            "interested_topics": ["Public Policy", "Community", "Official Announcements"],
+            "age": 0,
+            "gender": "male",
+            "mbti": "Hospital",
+            "country": random.choice(BASE_LOCATIONS),
+            "profession": "Level-1 Trauma Center",
+            "interested_topics": ["ICU_Beds_3", "OT_Free_2", "Blood_O_Neg_4_units"],
         }
 
     else:
-        # Default persona
         return {
             "bio": entity_summary[:150] if entity_summary else f"{entity_type}: {entity_name}",
             "persona": (
                 entity_summary
-                or f"{entity_name} is a {entity_type.lower()} participating in social discussions."
+                or f"{entity_name} is a {entity_type.lower()} participating in emergency response."
             ),
-            "age": random.randint(25, 50),
-            "gender": random.choice(["male", "female"]),
-            "mbti": random.choice(MBTI_TYPES),
-            "country": random.choice(COUNTRIES),
+            "age": random.randint(5, 20),
+            "gender": "male",
+            "mbti": random.choice(UNIT_TYPES),
+            "country": random.choice(BASE_LOCATIONS),
             "profession": entity_type,
-            "interested_topics": ["General", "Social Issues"],
+            "interested_topics": ["Emergency_Response", "Coordination"],
         }
 
 
@@ -483,20 +483,20 @@ def print_generated_profile(entity_name: str, entity_type: str, profile: Any) ->
 
     output_lines = [
         f"\n{separator}",
-        f"[Generated] {entity_name} ({entity_type})",
+        f"[Generated Unit Profile] {entity_name} ({entity_type})",
         f"{separator}",
-        f"Username: {profile.user_name}",
+        f"Callsign: {profile.user_name}",
         "",
-        "[Bio]",
+        "[Status Bio]",
         f"{profile.bio}",
         "",
-        "[Detailed Persona]",
+        "[Operational Dossier]",
         f"{profile.persona}",
         "",
-        "[Basic Attributes]",
-        f"Age: {profile.age} | Gender: {profile.gender} | MBTI: {profile.mbti}",
-        f"Profession: {profile.profession} | Country: {profile.country}",
-        f"Topics of Interest: {topics_str}",
+        "[Unit Attributes]",
+        f"Response Time: {profile.age}min | Status: {profile.gender} | Unit Type: {profile.mbti}",
+        f"Role: {profile.profession} | Base: {profile.country}",
+        f"Equipment/Capabilities: {topics_str}",
         separator,
     ]
 
@@ -509,7 +509,12 @@ def print_generated_profile(entity_name: str, entity_type: str, profile: Any) ->
 
 def normalize_gender(gender: Optional[str]) -> str:
     """
-    Normalize the gender field to OASIS-required English format.
+    Normalize the gender / availability status field to OASIS-required format.
+
+    Profiles encode availability as:
+      male   → available
+      female → en_route
+      other  → busy / at capacity
 
     OASIS accepts: male, female, other
     """
@@ -519,13 +524,12 @@ def normalize_gender(gender: Optional[str]) -> str:
     gender_lower = gender.lower().strip()
 
     gender_map = {
-        "男": "male",
-        "女": "female",
-        "机构": "other",
-        "其他": "other",
         "male": "male",
         "female": "female",
         "other": "other",
+        "available": "male",
+        "en_route": "female",
+        "busy": "other",
     }
 
     return gender_map.get(gender_lower, "other")

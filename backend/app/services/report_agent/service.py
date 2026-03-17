@@ -12,9 +12,9 @@ import re
 from typing import Dict, Any, List, Optional, Callable
 from datetime import datetime
 
-from ....config import Config
-from ....utils.llm_client import LLMClient
-from ....utils.logger import get_logger
+from ...config import Config
+from ...utils.llm_client import LLMClient
+from ...utils.logger import get_logger
 from ..zep_tools import (
     ZepToolsService,
     SearchResult,

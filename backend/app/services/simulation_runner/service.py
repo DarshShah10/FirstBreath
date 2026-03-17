@@ -6,6 +6,7 @@ and provides real-time status monitoring.
 """
 
 import os
+import re
 import sys
 import json
 import time
@@ -17,8 +18,11 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime
 from queue import Queue
 
-from ....config import Config
-from ....utils.logger import get_logger
+# Allowed characters for simulation IDs used in filesystem paths
+_SAFE_ID_RE = re.compile(r'^[a-zA-Z0-9_-]{1,128}$')
+
+from ...config import Config
+from ...utils.logger import get_logger
 from ..zep_graph_memory_updater import ZepGraphMemoryManager
 from ..simulation_ipc import SimulationIPCClient, CommandType, IPCResponse
 from .models import RunnerStatus, AgentAction, RoundSummary, SimulationRunState
@@ -69,6 +73,7 @@ class SimulationRunner:
     @classmethod
     def get_run_state(cls, simulation_id: str) -> Optional[SimulationRunState]:
         """Get run state; falls back to loading from file."""
+        cls._validate_simulation_id(simulation_id)
         if simulation_id in cls._run_states:
             return cls._run_states[simulation_id]
 
@@ -78,8 +83,15 @@ class SimulationRunner:
         return state
 
     @classmethod
+    def _validate_simulation_id(cls, simulation_id: str) -> None:
+        """Raise ValueError if simulation_id contains unsafe characters."""
+        if not _SAFE_ID_RE.match(simulation_id):
+            raise ValueError(f"Invalid simulation_id: {simulation_id!r}")
+
+    @classmethod
     def _load_run_state(cls, simulation_id: str) -> Optional[SimulationRunState]:
         """Load run state from file."""
+        cls._validate_simulation_id(simulation_id)
         state_file = os.path.join(cls.RUN_STATE_DIR, simulation_id, "run_state.json")
         if not os.path.exists(state_file):
             return None
@@ -169,6 +181,7 @@ class SimulationRunner:
         Returns:
             SimulationRunState
         """
+        cls._validate_simulation_id(simulation_id)
         # Check if already running
         existing = cls.get_run_state(simulation_id)
         if existing and existing.runner_status in [RunnerStatus.RUNNING, RunnerStatus.STARTING]:

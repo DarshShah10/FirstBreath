@@ -1,5 +1,5 @@
 """
-LLM prompt builders for the OASIS Agent Profile generator.
+LLM prompt builders for the VahanAI Emergency Response Unit Profile generator.
 """
 
 import json
@@ -7,13 +7,12 @@ from typing import Any, Dict
 
 
 def get_system_prompt(is_individual: bool) -> str:
-    """Return the LLM system prompt for profile generation."""
+    """Return the LLM system prompt for emergency unit profile generation."""
     return (
-        "You are a social media user persona generation expert. "
-        "Generate detailed, realistic personas for public opinion simulation, "
-        "restoring real-world situations to the greatest extent possible. "
+        "You are an emergency logistics unit profile generation expert. "
+        "Generate detailed, realistic operational profiles for emergency response simulation. "
         "You must return valid JSON format; all string values must not contain "
-        "unescaped newline characters. Use Chinese."
+        "unescaped newline characters. Respond only in English."
     )
 
 
@@ -24,12 +23,11 @@ def build_individual_persona_prompt(
     entity_attributes: Dict[str, Any],
     context: str,
 ) -> str:
-    """Build the LLM prompt for an individual entity persona."""
+    """Build the LLM prompt for an individual emergency response unit (Ambulance, Doctor, Nurse, Dispatcher)."""
     attrs_str = json.dumps(entity_attributes, ensure_ascii=False) if entity_attributes else "None"
     context_str = context[:3000] if context else "No additional context"
 
-    return f"""Generate a detailed social media user persona for this entity, \
-restoring real-world situations to the greatest extent possible.
+    return f"""Generate a detailed emergency response unit operational profile.
 
 Entity name: {entity_name}
 Entity type: {entity_type}
@@ -39,31 +37,36 @@ Entity attributes: {attrs_str}
 Context information:
 {context_str}
 
-Please generate JSON with the following fields:
+Generate JSON with these exact fields:
 
-1. bio: Social media bio, 200 characters
-2. persona: Detailed persona description (2000-character plain text), including:
-   - Basic information (age, occupation, educational background, location)
-   - Background (important experiences, connection to events, social relationships)
-   - Personality traits (MBTI type, core personality, emotional expression style)
-   - Social media behavior (posting frequency, content preferences, interaction style, language characteristics)
-   - Stance and opinions (attitude toward topics, content that might provoke or move them)
-   - Unique traits (catchphrases, special experiences, personal hobbies)
-   - Personal memory (important part of the persona: describe this individual's connection to the event \
-and their existing actions and reactions in the event)
-3. age: Age as an integer
-4. gender: Gender in English: "male" or "female"
-5. mbti: MBTI type (e.g. INTJ, ENFP)
-6. country: Country (use Chinese, e.g. "中国")
-7. profession: Occupation
-8. interested_topics: Array of topics of interest
+1. bio: Unit callsign and current status summary, 200 characters max.
+   Example: "AMB-07 | ALS Unit | Apollo North Base | Status: Available | Defibrillator, O2, IV Kit"
+2. persona: Detailed operational dossier, 2000-character plain text, including:
+   - Unit identity (callsign, unit type: ALS_Ambulance / BLS_Ambulance / Doctor_Surgeon / Trauma_Nurse / Dispatcher)
+   - Base location and coverage zone (which city sectors or hospitals this unit covers)
+   - Response speed profile (average response time in minutes, typical route constraints)
+   - Specialty and equipment (medical specialty, equipment loadout, procedures capable of)
+   - Availability pattern (shift hours, peak availability windows, current operational status)
+   - Communication style (how this unit broadcasts status: terse radio vs. detailed hospital comms)
+   - Known bottlenecks (traffic corridors to avoid, equipment limitations, capacity constraints)
+   - Operational memory (this unit's involvement in the current emergency: what they know and have done)
+3. age: Response time in minutes as integer (e.g. 8 for a unit 8 minutes away)
+4. gender: Availability status — must be exactly "male" (available), "female" (en_route), or "other" (busy)
+5. mbti: Unit type code — one of: "ALS_Ambulance", "BLS_Ambulance", "Doctor_Surgeon", "Trauma_Nurse",
+   "Dispatcher", "BloodBank", "OperatingTheater", "Hospital"
+6. country: Base location (e.g. "Apollo Hospital North Wing", "City Control Room Sector 4")
+7. profession: Medical specialty or operational role
+   (e.g. "Cardiac Surgeon", "Trauma Response Coordinator", "Advanced Life Support Paramedic")
+8. interested_topics: Equipment and capabilities list
+   (e.g. ["Defibrillator", "Advanced_Airway", "Blood_O_Neg_4_units", "Spinal_Board"])
 
 Important:
-- All field values must be strings or numbers; do not use newline characters
-- persona must be a continuous prose description
-- Use Chinese (except gender which must be English male/female)
-- Content must be consistent with the entity information
-- age must be a valid integer; gender must be "male" or "female"
+- age must be a valid integer (response time in minutes, 1-60)
+- gender must be exactly "male" (available), "female" (en_route), or "other" (busy)
+- mbti must be one of the listed unit type codes
+- persona must be continuous prose without newline characters
+- All content must reflect realistic emergency logistics
+- Respond only in English
 """
 
 
@@ -74,12 +77,11 @@ def build_group_persona_prompt(
     entity_attributes: Dict[str, Any],
     context: str,
 ) -> str:
-    """Build the LLM prompt for a group / institutional entity persona."""
+    """Build the LLM prompt for a facility entity (Hospital, BloodBank, OperatingTheater, DispatchCenter)."""
     attrs_str = json.dumps(entity_attributes, ensure_ascii=False) if entity_attributes else "None"
     context_str = context[:3000] if context else "No additional context"
 
-    return f"""Generate a detailed social media account profile for this institution/group entity, \
-restoring real-world situations to the greatest extent possible.
+    return f"""Generate a detailed emergency facility operational profile for this institution.
 
 Entity name: {entity_name}
 Entity type: {entity_type}
@@ -89,29 +91,30 @@ Entity attributes: {attrs_str}
 Context information:
 {context_str}
 
-Please generate JSON with the following fields:
+Generate JSON with these exact fields:
 
-1. bio: Official account bio, 200 characters, professional and appropriate
-2. persona: Detailed account profile description (2000-character plain text), including:
-   - Basic institutional information (official name, nature of institution, founding background, main functions)
-   - Account positioning (account type, target audience, core function)
-   - Communication style (language characteristics, common expressions, taboo topics)
-   - Content publication characteristics (content types, posting frequency, active time periods)
-   - Stance and attitude (official position on core topics, approach to handling controversy)
-   - Special notes (representative group profile, operational habits)
-   - Institutional memory (important part of the institutional persona: describe this institution's \
-connection to the event and its existing actions and reactions in the event)
-3. age: Set to 30 (virtual age for institutional accounts)
-4. gender: Set to "other" (institutional accounts use "other" to indicate non-personal)
-5. mbti: MBTI type describing account style, e.g. ISTJ for rigorous and conservative
-6. country: Country (use Chinese, e.g. "中国")
-7. profession: Description of institutional function
-8. interested_topics: Array of areas of focus
+1. bio: Facility callsign and current capacity status, 200 characters max.
+   Example: "City General Hospital | L1 Trauma | OT: 2 free | ICU: 3 beds | Blood A+: 8 units"
+2. persona: Detailed facility operational profile, 2000-character plain text, including:
+   - Facility identity (name, type: Hospital / BloodBank / OperatingTheater / DispatchCenter)
+   - Capacity status (beds available, OTs free, blood inventory by type, ICU availability)
+   - Staff on duty (doctors present, nurses on shift, anesthesiologists available)
+   - Communication protocol (how this facility broadcasts availability and who to contact)
+   - Current patient load (how busy the facility is right now in the simulation)
+   - Known constraints (equipment under maintenance, staff shortages, surge conditions)
+   - Facility memory (this facility's role in the current emergency scenario)
+3. age: Set to 0 (facility, not an individual)
+4. gender: Set to "male" if available capacity, "other" if at capacity or unavailable
+5. mbti: Set to one of: "Hospital", "BloodBank", "OperatingTheater", "DispatchCenter"
+6. country: Physical location or sector (e.g. "Sector 12 Main Campus", "North District Hub")
+7. profession: Facility type and level (e.g. "Level-1 Trauma Center", "Regional Blood Bank")
+8. interested_topics: Current inventory and capacity list
+   (e.g. ["ICU_Beds_3", "OT_Free_2", "Blood_A_Pos_8_units", "Ventilators_2"])
 
 Important:
-- All field values must be strings or numbers; null values are not allowed
-- persona must be a continuous prose description without newline characters
-- Use Chinese (except gender which must be English "other")
-- age must be integer 30; gender must be string "other"
-- Institutional account communication must match its identity positioning
+- age must be integer 0
+- gender must be "male" (available) or "other" (at capacity / unavailable)
+- mbti must be one of the listed facility type codes
+- All values must reflect the current emergency simulation state
+- Respond only in English
 """

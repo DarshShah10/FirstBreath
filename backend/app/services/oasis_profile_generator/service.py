@@ -17,10 +17,10 @@ import concurrent.futures
 from openai import OpenAI
 from zep_cloud.client import Zep
 
-from ....config import Config
-from ....utils.logger import get_logger
+from ...config import Config
+from ...utils.logger import get_logger
 from ..zep_entity_reader import EntityNode
-from .constants import MBTI_TYPES, COUNTRIES
+from .constants import UNIT_TYPES, BASE_LOCATIONS
 from .models import OasisAgentProfile
 from .prompts import build_group_persona_prompt, build_individual_persona_prompt, get_system_prompt
 from .utils import (
@@ -45,8 +45,8 @@ class OasisProfileGenerator:
 
     Key features:
     1. Calls Zep graph retrieval to obtain richer context.
-    2. Generates highly detailed personas (basic info, career, personality, social media behavior).
-    3. Distinguishes individual entities from group/institutional entities.
+    2. Generates highly detailed operational dossiers (callsign, specialty, location, equipment, availability).
+    3. Distinguishes individual response units from facility/institution entities.
     """
 
     def __init__(
@@ -226,7 +226,7 @@ class OasisProfileGenerator:
                     user_name=generate_username(entity.name),
                     name=entity.name,
                     bio=f"{entity_type}: {entity.name}",
-                    persona=entity.summary or "A participant in social discussions.",
+                    persona=entity.summary or "An emergency response unit participating in the Golden Hour.",
                     source_entity_uuid=entity.uuid,
                     source_entity_type=entity_type,
                 )
@@ -286,7 +286,7 @@ class OasisProfileGenerator:
                         user_name=generate_username(entity.name),
                         name=entity.name,
                         bio=f"{entity_type}: {entity.name}",
-                        persona=entity.summary or "A participant in social discussions.",
+                        persona=entity.summary or "An emergency response unit participating in the Golden Hour.",
                         source_entity_uuid=entity.uuid,
                         source_entity_type=entity_type,
                     )
@@ -502,14 +502,14 @@ class OasisProfileGenerator:
                 "username": profile.user_name,
                 "name": profile.name,
                 "bio": profile.bio[:150] if profile.bio else f"{profile.name}",
-                "persona": profile.persona or f"{profile.name} is a participant in social discussions.",
+                "persona": profile.persona or f"{profile.name} is an emergency response unit in the Golden Hour simulation.",
                 "karma": profile.karma if profile.karma else 1000,
                 "created_at": profile.created_at,
                 # OASIS required fields — all must have defaults
                 "age": profile.age if profile.age else 30,
                 "gender": normalize_gender(profile.gender),
                 "mbti": profile.mbti if profile.mbti else "ISTJ",
-                "country": profile.country if profile.country else "中国",
+                "country": profile.country if profile.country else "City Emergency Services",
             }
 
             if profile.profession:

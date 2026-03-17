@@ -3,13 +3,13 @@
     <!-- Top Control Bar -->
     <div class="control-bar">
       <div class="status-group">
-        <!-- Twitter 平台进度 -->
+        <!-- City Traffic Network progress -->
         <div class="platform-status twitter" :class="{ active: runStatus.twitter_running, completed: runStatus.twitter_completed }">
           <div class="platform-header">
             <svg class="platform-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
             </svg>
-            <span class="platform-name">Info Plaza</span>
+            <span class="platform-name">Traffic Network</span>
             <span v-if="runStatus.twitter_completed" class="status-badge">
               <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3">
                 <polyline points="20 6 9 17 4 12"></polyline>
@@ -18,39 +18,39 @@
           </div>
           <div class="platform-stats">
             <span class="stat">
-              <span class="stat-label">ROUND</span>
+              <span class="stat-label">MINUTE</span>
               <span class="stat-value mono">{{ runStatus.twitter_current_round || 0 }}<span class="stat-total">/{{ runStatus.total_rounds || maxRounds || '-' }}</span></span>
             </span>
             <span class="stat">
-              <span class="stat-label">Elapsed Time</span>
+              <span class="stat-label">Golden Hour</span>
               <span class="stat-value mono">{{ twitterElapsedTime }}</span>
             </span>
             <span class="stat">
-              <span class="stat-label">ACTS</span>
+              <span class="stat-label">DISPATCHES</span>
               <span class="stat-value mono">{{ runStatus.twitter_actions_count || 0 }}</span>
             </span>
           </div>
-          <!-- 可用动作提示 -->
+          <!-- Available unit actions -->
           <div class="actions-tooltip">
-            <div class="tooltip-title">Available Actions</div>
+            <div class="tooltip-title">Unit Actions</div>
             <div class="tooltip-actions">
-              <span class="tooltip-action">POST</span>
-              <span class="tooltip-action">LIKE</span>
-              <span class="tooltip-action">REPOST</span>
-              <span class="tooltip-action">QUOTE</span>
-              <span class="tooltip-action">FOLLOW</span>
-              <span class="tooltip-action">IDLE</span>
+              <span class="tooltip-action">BROADCAST</span>
+              <span class="tooltip-action">ACK</span>
+              <span class="tooltip-action">RELAY</span>
+              <span class="tooltip-action">ESCALATE</span>
+              <span class="tooltip-action">REROUTE</span>
+              <span class="tooltip-action">STANDBY</span>
             </div>
           </div>
         </div>
         
-        <!-- Reddit 平台进度 -->
+        <!-- Hospital Coordination Network progress -->
         <div class="platform-status reddit" :class="{ active: runStatus.reddit_running, completed: runStatus.reddit_completed }">
           <div class="platform-header">
             <svg class="platform-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
             </svg>
-            <span class="platform-name">Topic Community</span>
+            <span class="platform-name">Hospital Network</span>
             <span v-if="runStatus.reddit_completed" class="status-badge">
               <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3">
                 <polyline points="20 6 9 17 4 12"></polyline>
@@ -59,31 +59,31 @@
           </div>
           <div class="platform-stats">
             <span class="stat">
-              <span class="stat-label">ROUND</span>
+              <span class="stat-label">MINUTE</span>
               <span class="stat-value mono">{{ runStatus.reddit_current_round || 0 }}<span class="stat-total">/{{ runStatus.total_rounds || maxRounds || '-' }}</span></span>
             </span>
             <span class="stat">
-              <span class="stat-label">Elapsed Time</span>
+              <span class="stat-label">Golden Hour</span>
               <span class="stat-value mono">{{ redditElapsedTime }}</span>
             </span>
             <span class="stat">
-              <span class="stat-label">ACTS</span>
+              <span class="stat-label">RESPONSES</span>
               <span class="stat-value mono">{{ runStatus.reddit_actions_count || 0 }}</span>
             </span>
           </div>
-          <!-- 可用动作提示 -->
+          <!-- Available facility actions -->
           <div class="actions-tooltip">
-            <div class="tooltip-title">Available Actions</div>
+            <div class="tooltip-title">Facility Actions</div>
             <div class="tooltip-actions">
-              <span class="tooltip-action">POST</span>
-              <span class="tooltip-action">COMMENT</span>
-              <span class="tooltip-action">LIKE</span>
-              <span class="tooltip-action">DISLIKE</span>
-              <span class="tooltip-action">SEARCH</span>
-              <span class="tooltip-action">TREND</span>
-              <span class="tooltip-action">FOLLOW</span>
-              <span class="tooltip-action">MUTE</span>
-              <span class="tooltip-action">REFRESH</span>
+              <span class="tooltip-action">STATUS</span>
+              <span class="tooltip-action">RESPOND</span>
+              <span class="tooltip-action">CONFIRM</span>
+              <span class="tooltip-action">DECLINE</span>
+              <span class="tooltip-action">REQUEST</span>
+              <span class="tooltip-action">ALERT</span>
+              <span class="tooltip-action">PREP</span>
+              <span class="tooltip-action">HANDOFF</span>
+              <span class="tooltip-action">STANDBY</span>
               <span class="tooltip-action">IDLE</span>
             </div>
           </div>
@@ -255,7 +255,7 @@
               </div>
 
               <div class="card-footer">
-                <span class="time-tag">R{{ action.round_num }} • {{ formatActionTime(action.timestamp) }}</span>
+                <span class="time-tag">M{{ action.round_num }} • {{ formatActionTime(action.timestamp) }}</span>
                 <!-- Platform tag removed as it is in header now -->
               </div>
             </div>
@@ -264,7 +264,7 @@
 
         <div v-if="allActions.length === 0" class="waiting-state">
           <div class="pulse-ring"></div>
-          <span>Waiting for agent actions...</span>
+          <span>Waiting for unit dispatches...</span>
         </div>
       </div>
     </div>
@@ -499,12 +499,12 @@ const fetchRunStatus = async () => {
       
       // 分别检测各平台的轮次变化并输出日志
       if (data.twitter_current_round > prevTwitterRound.value) {
-        addLog(`[Plaza] R${data.twitter_current_round}/${data.total_rounds} | T:${data.twitter_simulated_hours || 0}h | A:${data.twitter_actions_count}`)
+        addLog(`[Traffic] M${data.twitter_current_round}/${data.total_rounds} | T:${data.twitter_simulated_hours || 0}h | D:${data.twitter_actions_count}`)
         prevTwitterRound.value = data.twitter_current_round
       }
       
       if (data.reddit_current_round > prevRedditRound.value) {
-        addLog(`[Community] R${data.reddit_current_round}/${data.total_rounds} | T:${data.reddit_simulated_hours || 0}h | A:${data.reddit_actions_count}`)
+        addLog(`[Hospital] M${data.reddit_current_round}/${data.total_rounds} | T:${data.reddit_simulated_hours || 0}h | R:${data.reddit_actions_count}`)
         prevRedditRound.value = data.reddit_current_round
       }
       

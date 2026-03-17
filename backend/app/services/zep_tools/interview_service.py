@@ -1,9 +1,13 @@
 """Agent interview mixin for ZepToolsService."""
 
 import json
+import re
 from typing import Dict, Any, List, Optional
 
 from ...utils.logger import get_logger
+
+# Allowed characters for simulation IDs used in filesystem paths
+_SAFE_ID_RE = re.compile(r'^[a-zA-Z0-9_-]{1,128}$')
 
 from .base import ZepToolsBase
 from .models import AgentInterview, InterviewResult
@@ -263,11 +267,17 @@ class InterviewMixin(ZepToolsBase):
         import os
         import csv
 
-        # Build the profile directory path
-        sim_dir = os.path.join(
-            os.path.dirname(__file__),
-            f'../../../uploads/simulations/{simulation_id}'
-        )
+        # Validate simulation_id to prevent path traversal
+        if not _SAFE_ID_RE.match(simulation_id):
+            raise ValueError(f"Invalid simulation_id: {simulation_id!r}")
+
+        # Build and normalise the profile directory path
+        uploads_root = os.path.normpath(os.path.join(os.path.dirname(__file__), '../../../uploads'))
+        sim_dir = os.path.normpath(os.path.join(uploads_root, 'simulations', simulation_id))
+
+        # Boundary check — ensure we stay inside the uploads directory
+        if not sim_dir.startswith(uploads_root + os.sep):
+            raise ValueError(f"Resolved path escapes uploads root for simulation_id: {simulation_id!r}")
 
         profiles = []
 

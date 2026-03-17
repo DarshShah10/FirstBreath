@@ -1,7 +1,7 @@
 """
 Ontology generator service.
-Analyses document text and generates entity and relationship type definitions
-suitable for social simulation.
+Analyses emergency scenario documents and generates entity and relationship type definitions
+suitable for emergency response simulation.
 """
 
 import json
@@ -9,32 +9,32 @@ from typing import Dict, Any, List, Optional
 from ..utils.llm_client import LLMClient
 
 
-ONTOLOGY_SYSTEM_PROMPT = """You are a professional knowledge graph ontology design expert. Your task is to analyse the given document content and simulation requirements, and design entity types and relationship types suitable for **social media opinion simulation**.
+ONTOLOGY_SYSTEM_PROMPT = """You are a professional knowledge graph ontology design expert. Your task is to analyse the given emergency scenario document and simulation requirements, and design entity types and relationship types suitable for **emergency response simulation**.
 
 **IMPORTANT: You must output valid JSON only. Do not output any other content.**
 
 ## Core Task Background
 
-We are building a **social media opinion simulation system** in which:
-- Each entity is an "account" or "actor" that can post, interact, and spread information on social media.
-- Entities influence each other, repost, comment, and respond.
-- We need to simulate how different parties react to opinion events and how information propagates.
+We are building a **VahanAI emergency response simulation system** in which:
+- Each entity is an emergency response unit or facility that can broadcast status, respond to dispatch commands, and coordinate with other units.
+- Entities communicate via radio broadcasts and coordination events.
+- We need to simulate how different units respond to an emergency and where the coordination chain succeeds or fails.
 
-Therefore, **entities must be real-world actors that can voice opinions and interact on social media**:
+Therefore, **entities must be real-world emergency response actors that can take operational actions**:
 
 **Valid entity types**:
-- Specific individuals (public figures, key persons, opinion leaders, experts, academics, ordinary people)
-- Companies and businesses (including official accounts)
-- Organisations (universities, associations, NGOs, trade unions, etc.)
-- Government departments and regulatory bodies
-- Media organisations (newspapers, TV stations, self-media, websites)
-- Social media platforms themselves
-- Representatives of specific groups (e.g. alumni associations, fan clubs, advocacy groups)
+- Mobile response units (ambulances, paramedics, first responders)
+- Medical personnel (doctors, surgeons, nurses, anesthesiologists)
+- Dispatch and coordination (control rooms, dispatchers, coordinators)
+- Medical facilities (hospitals, trauma centers, clinics)
+- Resource units (blood banks, operating theaters, ICUs)
+- Patient entities (the patient or patient group triggering the emergency)
+- Infrastructure actors (traffic control, road authorities when relevant)
 
 **Invalid entity types**:
-- Abstract concepts (e.g. "public opinion", "sentiment", "trends")
-- Topics / subjects (e.g. "academic integrity", "education reform")
-- Stances / attitudes (e.g. "supporters", "opponents")
+- Abstract concepts (e.g. "emergency severity", "response time", "coordination quality")
+- Process terms (e.g. "triage", "stabilization", "dispatch protocol")
+- Outcome states (e.g. "survival", "failure", "bottleneck")
 
 ## Output Format
 
@@ -66,7 +66,7 @@ Output JSON with the following structure:
             "attributes": []
         }
     ],
-    "analysis_summary": "Brief analysis summary of the document content"
+    "analysis_summary": "Brief analysis summary of the emergency scenario"
 }
 ```
 
@@ -81,77 +81,73 @@ Output JSON with the following structure:
 Your 10 entity types must include the following layers:
 
 A. **Fallback types (mandatory, placed as the last 2 entries)**:
-   - `Person`: Fallback type for any individual person. Use when a person does not fit any more specific person type.
-   - `Organization`: Fallback type for any organisation. Use when an organisation does not fit any more specific organisation type.
+   - `Person`: Fallback type for any individual (paramedic, bystander) not fitting a specific type.
+   - `Organization`: Fallback type for any facility or institution not fitting a specific type.
 
 B. **Specific types (8 types, designed from the document content)**:
-   - Design more specific types for the main roles appearing in the text.
-   - Example: if the text involves an academic event, types could include `Student`, `Professor`, `University`.
-   - Example: if the text involves a business event, types could include `Company`, `CEO`, `Employee`.
-
-**Why fallback types are needed**:
-- Texts contain diverse characters such as "primary school teachers", "passersby", "anonymous netizens".
-- If no specific type matches, they should fall into `Person`.
-- Similarly, small organisations and ad-hoc groups should fall into `Organization`.
+   - Design specific types for the main emergency roles appearing in the scenario.
+   - Example: if the scenario involves childbirth emergency: `Ambulance`, `Obstetrician`, `Nurse`, `Hospital`, `BloodBank`, `Dispatcher`, `OperatingTheater`, `Patient`
+   - Example: if the scenario involves cardiac arrest: `Ambulance`, `Cardiologist`, `ICU`, `Hospital`, `Dispatcher`, `Defibrillator`, `BloodBank`, `Patient`
 
 **Principles for specific types**:
-- Identify roles that appear frequently or are key in the text.
-- Each specific type should have clear boundaries with no overlap.
-- The description must clearly explain how this type differs from the fallback type.
+- Identify roles that appear frequently or are critical in the emergency scenario.
+- Each specific type should have clear operational boundaries with no overlap.
+- The description must clearly explain the unit's role in the response chain.
 
 ### 2. Relationship Type Design
 
 - Count: 6–10 relationship types.
-- Relationships should reflect real connections found in social media interactions.
+- Relationships should reflect real emergency logistics coordination patterns.
 - Ensure the `source_targets` of each relationship covers the entity types you have defined.
 
 ### 3. Attribute Design
 
 - 1–3 key attributes per entity type.
 - **Note**: Attribute names must NOT use `name`, `uuid`, `group_id`, `created_at`, or `summary` (system reserved words).
-- Recommended names: `full_name`, `title`, `role`, `position`, `location`, `description`, etc.
+- Recommended names: `callsign`, `location`, `specialty`, `capacity`, `equipment_level`, `response_time`, etc.
 
 ## Entity Type Reference
 
-**Individual (specific)**:
-- Student
-- Professor / Academic
-- Journalist
-- Celebrity / Influencer
-- Executive
-- Government Official
-- Lawyer
-- Doctor
+**Mobile Response Units (specific)**:
+- Ambulance (ALS or BLS unit)
+- Paramedic
+- FirstResponder
 
-**Individual (fallback)**:
-- Person: Any natural person (use when no specific type matches)
+**Medical Personnel (specific)**:
+- Doctor / Surgeon
+- Nurse
+- Anesthesiologist
 
-**Organisation (specific)**:
-- University
-- Company
-- GovernmentAgency
-- MediaOutlet
+**Dispatch and Coordination (specific)**:
+- Dispatcher
+
+**Medical Facilities (specific)**:
 - Hospital
-- School
-- NGO
+- BloodBank
+- OperatingTheater
+- ICU
 
-**Organisation (fallback)**:
-- Organization: Any organisation (use when no specific type matches)
+**Patient (specific)**:
+- Patient
+
+**Fallback types**:
+- Person: Any individual not fitting specific person types
+- Organization: Any facility or institution not fitting specific facility types
 
 ## Relationship Type Reference
 
-- WORKS_FOR
-- STUDIES_AT
-- AFFILIATED_WITH
-- REPRESENTS
-- REGULATES
-- REPORTS_ON
-- COMMENTS_ON
+- DISPATCHES
 - RESPONDS_TO
-- SUPPORTS
-- OPPOSES
-- COLLABORATES_WITH
-- COMPETES_WITH
+- TRANSPORTS
+- RECEIVES_PATIENT
+- COORDINATES_WITH
+- REQUESTS_RESOURCE_FROM
+- PROVIDES_RESOURCE_TO
+- BLOCKED_BY
+- ESCALATES_TO
+- HANDS_OFF_TO
+- COVERS_ZONE
+- REPORTS_STATUS_TO
 """
 
 
@@ -246,14 +242,14 @@ class OntologyGenerator:
 """
 
         message += """
-Based on the above content, design entity types and relationship types suitable for social opinion simulation.
+Based on the above content, design entity types and relationship types suitable for emergency response simulation.
 
 **Rules you must follow**:
 1. Output exactly 10 entity types.
-2. The last 2 must be fallback types: Person (individual fallback) and Organization (organisation fallback).
-3. The first 8 are specific types designed from the document content.
-4. All entity types must be real-world actors capable of voicing opinions — no abstract concepts.
-5. Attribute names must not use reserved words: name, uuid, group_id, created_at, summary. Use full_name, org_name, etc. instead.
+2. The last 2 must be fallback types: Person (individual fallback) and Organization (facility/institution fallback).
+3. The first 8 are specific types designed from the emergency scenario content.
+4. All entity types must be real-world emergency response actors capable of taking operational actions.
+5. Attribute names must not use reserved words: name, uuid, group_id, created_at, summary. Use callsign, location, specialty, etc. instead.
 """
 
         return message
@@ -360,7 +356,7 @@ Based on the above content, design entity types and relationship types suitable 
         code_lines = [
             '"""',
             'Custom entity type definitions.',
-            'Auto-generated by MiroFish for social opinion simulation.',
+            'Auto-generated by VahanAI for emergency response simulation.',
             '"""',
             '',
             'from pydantic import Field',

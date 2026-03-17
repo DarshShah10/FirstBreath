@@ -3,7 +3,7 @@
     <!-- Header -->
     <header class="app-header">
       <div class="header-left">
-        <div class="brand" @click="router.push('/')">MIROFISH</div>
+        <div class="brand" @click="router.push('/')">VAHAN.AI</div>
       </div>
       
       <div class="header-center">
@@ -91,7 +91,7 @@ const viewMode = ref('split') // graph | split | workbench
 
 // Step State
 const currentStep = ref(1) // 1: Graph Construction, 2: Environment Setup, 3: Start Simulation, 4: Report Generation, 5: Deep Interaction
-const stepNames = ['Graph Construction', 'Environment Setup', 'Start Simulation', 'Report Generation', 'Deep Interaction']
+const stepNames = ['Scenario Graph', 'Unit Setup', 'Golden Hour', 'VahanAI Optimization', 'Deep Debrief']
 
 // Data State
 const currentProjectId = ref(route.params.projectId)

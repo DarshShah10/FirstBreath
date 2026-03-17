@@ -1,5 +1,5 @@
 """
-LLM prompt builders for the simulation configuration generator.
+LLM prompt builders for the VahanAI Emergency Response simulation configuration generator.
 """
 
 import json
@@ -11,18 +11,23 @@ from typing import Any, Dict, List
 # ---------------------------------------------------------------------------
 
 TIME_CONFIG_SYSTEM_PROMPT = (
-    "You are a social media simulation expert. "
-    "Return pure JSON format. Time configurations must match Chinese daily schedule habits."
+    "You are an emergency logistics simulation expert. "
+    "Return pure JSON format. Time configurations represent the 60-minute Golden Hour "
+    "of emergency medical response, simulated minute-by-minute. "
+    "Respond only in English."
 )
 
 EVENT_CONFIG_SYSTEM_PROMPT = (
-    "You are a public opinion analysis expert. "
-    "Return pure JSON format. Note that poster_type must exactly match an available entity type."
+    "You are an emergency dispatch simulation expert. "
+    "Return pure JSON format. Initial events are the distress signal and first dispatch commands. "
+    "Note that poster_type must exactly match an available entity type. "
+    "Respond only in English."
 )
 
 AGENT_CONFIGS_SYSTEM_PROMPT = (
-    "You are a social media behavior analysis expert. "
-    "Return pure JSON. Configurations must match Chinese daily schedule habits."
+    "You are an emergency response behavior analysis expert. "
+    "Return pure JSON. Configurations must reflect real emergency logistics patterns. "
+    "Respond only in English."
 )
 
 
@@ -35,51 +40,52 @@ def build_time_config_prompt(
     num_entities: int,
     max_agents_allowed: int,
 ) -> str:
-    """Build the LLM prompt for generating time simulation configuration."""
-    return f"""Based on the following simulation requirements, generate a time simulation configuration.
+    """Build the LLM prompt for generating Golden Hour time simulation configuration."""
+    return f"""Based on the following emergency scenario, generate a Golden Hour simulation time configuration.
 
 {context}
 
 ## Task
-Generate a time configuration JSON.
+Generate a time configuration JSON for a 60-minute emergency response simulation.
 
-### Basic principles (for reference — adjust flexibly based on the specific event and participant group):
-- Users are based in China; the configuration must match Beijing time daily schedule habits.
-- 00:00–05:00: almost no activity (activity multiplier 0.05)
-- 06:00–08:00: gradually becoming active (activity multiplier 0.4)
-- 09:00–18:00: moderate activity during work hours (activity multiplier 0.7)
-- 19:00–22:00: peak period (activity multiplier 1.5)
-- 23:00 onwards: activity declining (activity multiplier 0.5)
-- General pattern: low in the early hours, rising in the morning, moderate during work hours, peak in the evening
-- **Important**: The example values below are for reference only. Adjust time slots based on event nature and participant group characteristics:
-  - Example: student group peak may be 21:00–23:00; media active all day; official institutions only during work hours
-  - Example: breaking news may trigger late-night discussion, so off_peak_hours can be shortened appropriately
+### Core Principles:
+- This is a minute-by-minute emergency response simulation, NOT a social media simulation.
+- The "Golden Hour" is the critical 60-minute window after an emergency where patient survival
+  probability drops sharply with every minute of delay.
+- total_simulation_hours MUST be set to 1 (= 60 minutes total)
+- minutes_per_round should be 5 (each round = 5 simulation minutes, giving 12 rounds total)
+- Activity patterns follow emergency surge logic:
+  - Minutes 0-10: CRITICAL DISPATCH (all units alerted, ambulances en route) — multiplier 2.0
+  - Minutes 11-20: HIGH RESPONSE (ambulances en route, hospital prep begins) — multiplier 1.8
+  - Minutes 21-35: PEAK TREATMENT (patient contact, triage, stabilization) — multiplier 1.5
+  - Minutes 36-50: MODERATE HANDOFF (transport to hospital, handoff to ER) — multiplier 1.2
+  - Minutes 51-60: RESOLUTION (post-handoff debrief, outcome assessment) — multiplier 0.8
 
 ### Return JSON format (no markdown)
 
 Example:
 {{
-    "total_simulation_hours": 72,
-    "minutes_per_round": 60,
-    "agents_per_hour_min": 5,
-    "agents_per_hour_max": 50,
-    "peak_hours": [19, 20, 21, 22],
-    "off_peak_hours": [0, 1, 2, 3, 4, 5],
-    "morning_hours": [6, 7, 8],
-    "work_hours": [9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
-    "reasoning": "Time configuration notes for this event"
+    "total_simulation_hours": 1,
+    "minutes_per_round": 5,
+    "agents_per_hour_min": 3,
+    "agents_per_hour_max": {max_agents_allowed},
+    "peak_hours": [0],
+    "off_peak_hours": [],
+    "morning_hours": [],
+    "work_hours": [0],
+    "reasoning": "Golden Hour: 60-minute emergency response window, 5-minute rounds"
 }}
 
 Field descriptions:
-- total_simulation_hours (int): Total simulation duration, 24–168 hours; shorter for breaking events, longer for sustained topics
-- minutes_per_round (int): Duration per round, 30–120 minutes; 60 minutes recommended
-- agents_per_hour_min (int): Minimum agents activated per hour (range: 1–{max_agents_allowed})
-- agents_per_hour_max (int): Maximum agents activated per hour (range: 1–{max_agents_allowed})
-- peak_hours (int array): Peak hours, adjusted for participant group
-- off_peak_hours (int array): Off-peak hours, typically late night / early morning
-- morning_hours (int array): Morning hours
-- work_hours (int array): Work hours
-- reasoning (string): Brief explanation of why this configuration was chosen"""
+- total_simulation_hours (int): MUST be 1 (the Golden Hour = 60 minutes)
+- minutes_per_round (int): Duration per round in minutes — use 5 for 12 rounds across the hour
+- agents_per_hour_min (int): Minimum units active per round (range: 1–{max_agents_allowed})
+- agents_per_hour_max (int): Maximum units active per round (range: 1–{max_agents_allowed})
+- peak_hours (int array): [0] — the entire Golden Hour is effectively peak
+- off_peak_hours (int array): [] — no off-peak in a life-or-death emergency
+- morning_hours (int array): [] — not applicable
+- work_hours (int array): [0] — the whole simulation is active
+- reasoning (string): Brief note on emergency type and expected response timeline"""
 
 
 def build_event_config_prompt(
@@ -87,36 +93,39 @@ def build_event_config_prompt(
     simulation_requirement: str,
     type_info: str,
 ) -> str:
-    """Build the LLM prompt for generating event configuration."""
-    return f"""Based on the following simulation requirements, generate an event configuration.
+    """Build the LLM prompt for generating initial emergency dispatch events."""
+    return f"""Based on the following emergency scenario, generate the initial dispatch events.
 
-Simulation requirement: {simulation_requirement}
+Emergency scenario: {simulation_requirement}
 
 {context}
 
-## Available entity types and examples
+## Available unit types and examples
 {type_info}
 
 ## Task
-Generate an event configuration JSON:
-- Extract trending topic keywords
-- Describe the direction of public opinion development
-- Design initial post content; **each post must specify a poster_type (poster entity type)**
+Generate an initial dispatch event configuration:
+- Extract critical alert keywords (medical condition, location, severity level)
+- Describe the expected response chain timeline
+- Design initial broadcast messages; **each must specify a poster_type (which unit sends it)**
 
-**Important**: poster_type must be chosen from the "Available entity types" listed above so that \
-initial posts can be assigned to the appropriate agent for publishing.
-For example: official statements should be posted by Official/University type, \
-news by MediaOutlet, student opinions by Student.
+**Important**: poster_type must match an available unit type. Examples:
+- 108 distress call or initial alert → poster_type: "Dispatcher"
+- Hospital bed / OT status update → poster_type: "Hospital"
+- Ambulance ETA broadcast → poster_type: "ALS_Ambulance" or "BLS_Ambulance"
+- Blood availability confirmation → poster_type: "BloodBank"
+- Doctor on-call status → poster_type: "Doctor_Surgeon"
 
 Return JSON format (no markdown):
 {{
-    "hot_topics": ["keyword1", "keyword2", ...],
-    "narrative_direction": "<description of public opinion development direction>",
+    "hot_topics": ["keyword1 (e.g. FetalDistress)", "keyword2 (e.g. Sector12)", "keyword3 (e.g. GoldenHour)"],
+    "narrative_direction": "<expected response chain timeline, e.g.: Dispatch(T+0) → AmbulanceDispatch(T+2) → PatientContact(T+12) → HospitalHandoff(T+35) → OTEntry(T+45)>",
     "initial_posts": [
-        {{"content": "post content", "poster_type": "entity type (must be chosen from available types)"}},
-        ...
+        {{"content": "PRIORITY-1 ALERT: Fetal distress reported. 34 Gulmohar Road, Sector 12. Female patient, 28yr, 36wk gestation. Vitals critical. ALL UNITS RESPOND.", "poster_type": "Dispatcher"}},
+        {{"content": "AMB-07 responding to Sector 12. ETA 12 minutes via NH-48. Traffic nominal. ALS crew standing by.", "poster_type": "ALS_Ambulance"}},
+        {{"content": "City General ER: Trauma bay 2 cleared. OT-3 on standby. Neonatal team alerted. Blood O-Neg confirmed available.", "poster_type": "Hospital"}}
     ],
-    "reasoning": "<brief explanation>"
+    "reasoning": "<brief explanation of the emergency scenario and expected bottlenecks>"
 }}"""
 
 
@@ -124,38 +133,53 @@ def build_agent_configs_batch_prompt(
     simulation_requirement: str,
     entity_list: List[Dict[str, Any]],
 ) -> str:
-    """Build the LLM prompt for generating a batch of agent activity configurations."""
-    return f"""Based on the following information, generate social media activity configurations for each entity.
+    """Build the LLM prompt for generating a batch of emergency unit activity configurations."""
+    return f"""Based on the following emergency scenario, generate operational configurations for each unit.
 
-Simulation requirement: {simulation_requirement}
+Emergency scenario: {simulation_requirement}
 
-## Entity list
+## Unit list
 ```json
 {json.dumps(entity_list, ensure_ascii=False, indent=2)}
 ```
 
 ## Task
-Generate activity configurations for each entity. Notes:
-- **Time must match Chinese daily schedule**: almost no activity from 00:00–05:00; most active from 19:00–22:00
-- **Official institutions** (University/GovernmentAgency): low activity (0.1–0.3), active during work hours (9–17), slow response (60–240 min), high influence (2.5–3.0)
-- **Media** (MediaOutlet): medium activity (0.4–0.6), active all day (8–23), fast response (5–30 min), high influence (2.0–2.5)
-- **Individuals** (Student/Person/Alumni): high activity (0.6–0.9), mainly evening (18–23), fast response (1–15 min), low influence (0.8–1.2)
-- **Public figures / Experts**: medium activity (0.4–0.6), medium-high influence (1.5–2.0)
+Generate activity configurations for each unit. Behavioral rules:
+
+- **Dispatchers / Control Room**: Very high activity (0.9), active across all 12 rounds, response delay
+  0-2 minutes, very high influence (3.0). They orchestrate the entire response chain.
+- **ALS/BLS Ambulances**: High activity (0.8), most active in rounds 1-6 (en route and patient contact),
+  response delay 1-5 minutes, medium influence (1.5).
+- **Doctors / Surgeons**: Medium activity (0.5), most active in rounds 4-12 (receiving patient and
+  operating), response delay 2-10 minutes, very high influence (2.5).
+- **Trauma Nurses**: High activity (0.7), active throughout all rounds, fast response 1-3 minutes,
+  medium influence (1.2).
+- **BloodBank / OperatingTheater**: Low activity (0.3), respond only when requested by dispatch or
+  hospital, slow response 5-20 minutes, high influence (2.0) — critical but reactive.
+- **Hospitals**: Medium activity (0.4), active from round 3 onwards (prep phase begins), medium
+  influence (2.0).
+
+Sentiment bias interpretation:
+- Negative (-1.0 to -0.3): Unit is overwhelmed, delayed, or reporting failure conditions
+- Neutral (-0.2 to 0.2): Unit is operational, normal response
+- Positive (0.3 to 1.0): Unit is performing optimally, ahead of schedule
+
+Stance values: "responding" / "coordinating" / "waiting" / "critical"
 
 Return JSON format (no markdown):
 {{
     "agent_configs": [
         {{
-            "agent_id": <must match input>,
-            "activity_level": <0.0–1.0>,
-            "posts_per_hour": <posting frequency>,
-            "comments_per_hour": <comment frequency>,
-            "active_hours": [<list of active hours, matching Chinese schedule>],
-            "response_delay_min": <minimum response delay in minutes>,
-            "response_delay_max": <maximum response delay in minutes>,
+            "agent_id": <must match input agent_id>,
+            "activity_level": <0.0-1.0>,
+            "posts_per_hour": <broadcast frequency per round>,
+            "comments_per_hour": <response frequency per round>,
+            "active_hours": [0],
+            "response_delay_min": <minimum delay in minutes>,
+            "response_delay_max": <maximum delay in minutes>,
             "sentiment_bias": <-1.0 to 1.0>,
-            "stance": "<supportive/opposing/neutral/observer>",
-            "influence_weight": <influence weight>
+            "stance": "<responding/coordinating/waiting/critical>",
+            "influence_weight": <influence weight 0.5-3.0>
         }},
         ...
     ]

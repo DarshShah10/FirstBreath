@@ -19,8 +19,11 @@ import re
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 
-from ....config import Config
-from ....utils.logger import get_logger
+# Allowed characters for report/simulation IDs used in filesystem paths
+_SAFE_ID_RE = re.compile(r'^[a-zA-Z0-9_-]{1,128}$')
+
+from ...config import Config
+from ...utils.logger import get_logger
 from .models import Report, ReportSection, ReportOutline, ReportStatus
 
 logger = get_logger('mirofish.report_agent')
@@ -41,8 +44,15 @@ class ReportManager:
         os.makedirs(cls.REPORTS_DIR, exist_ok=True)
 
     @classmethod
+    def _validate_report_id(cls, report_id: str) -> None:
+        """Raise ValueError if report_id contains unsafe characters."""
+        if not _SAFE_ID_RE.match(report_id):
+            raise ValueError(f"Invalid report_id: {report_id!r}")
+
+    @classmethod
     def _get_report_folder(cls, report_id: str) -> str:
         """Return the path to the report folder."""
+        cls._validate_report_id(report_id)
         return os.path.join(cls.REPORTS_DIR, report_id)
 
     @classmethod

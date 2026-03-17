@@ -2,7 +2,7 @@
   <div class="home-container">
     <!-- Top Navigation Bar -->
     <nav class="navbar">
-      <div class="nav-brand">MIROFISH</div>
+      <div class="nav-brand">VAHAN.AI</div>
       <div class="nav-links">
         <a href="https://github.com/666ghj/MiroFish" target="_blank" class="github-link">
           Visit our GitHub page <span class="arrow">↗</span>
@@ -15,21 +15,21 @@
       <section class="hero-section">
         <div class="hero-left">
           <div class="tag-row">
-            <span class="orange-tag">Simple & Universal Swarm Intelligence Engine</span>
+            <span class="orange-tag">Real-Time Emergency Response Optimizer</span>
             <span class="version-text">/ v0.1-Preview</span>
           </div>
           
           <h1 class="main-title">
-            Upload Any Report<br>
-            <span class="gradient-text">Predict the Future Instantly</span>
+            Load Any Emergency Scenario<br>
+            <span class="gradient-text">Simulate the Golden Hour</span>
           </h1>
-          
+
           <div class="hero-desc">
             <p>
-              Even with just a snippet of text, <span class="highlight-bold">MiroFish</span> can automatically generate a parallel world of up to a <span class="highlight-orange">million agents</span> based on "reality seeds." By injecting variables from a "God's eye" perspective, seek <span class="highlight-code">"local optimal solutions"</span> in dynamic environments through complex swarm interactions.
+              When a 108 distress call arrives, <span class="highlight-bold">VahanAI</span> simulates the <span class="highlight-orange">entire response chain</span> — Ambulances, Dispatchers, Doctors, Operating Theaters, Blood Banks — in real time. By injecting the emergency as a variable, <span class="highlight-code">predict if the response will fail</span> and recommend the exact intervention to save the patient.
             </p>
             <p class="slogan-text">
-              Let the future replay among agent swarms; let decisions emerge victorious after a thousand simulations<span class="blinking-cursor">_</span>
+              Every second counts in the Golden Hour. Identify the bottleneck before it costs a life<span class="blinking-cursor">_</span>
             </p>
           </div>
            
@@ -58,7 +58,7 @@
           
           <h2 class="section-title">Ready</h2>
           <p class="section-desc">
-            Prediction engine standby. Upload multiple unstructured data files to initialize simulation sequences.
+            VahanAI standby. Upload an emergency scenario document to initialize the Golden Hour simulation.
           </p>
           
           <!-- Data Metric Cards -->
@@ -82,36 +82,36 @@
               <div class="workflow-item">
                 <span class="step-num">01</span>
                 <div class="step-info">
-                  <div class="step-title">Graph Construction</div>
-                  <div class="step-desc">Reality seed extraction, individual/swarm memory injection & GraphRAG construction</div>
+                  <div class="step-title">Scenario Graph</div>
+                  <div class="step-desc">Emergency scenario ingestion, knowledge graph construction & Zep GraphRAG memory initialization</div>
                 </div>
               </div>
               <div class="workflow-item">
                 <span class="step-num">02</span>
                 <div class="step-info">
-                  <div class="step-title">Environment Setup</div>
-                  <div class="step-desc">Entity relationship extraction, persona generation & environment config Agent parameter injection</div>
+                  <div class="step-title">Unit Setup</div>
+                  <div class="step-desc">Response unit extraction, operational dossier generation & Golden Hour parameter configuration</div>
                 </div>
               </div>
               <div class="workflow-item">
                 <span class="step-num">03</span>
                 <div class="step-info">
-                  <div class="step-title">Start Simulation</div>
-                  <div class="step-desc">Dual-platform parallel simulation, automatic parsing of prediction needs & dynamic temporal memory updates</div>
+                  <div class="step-title">Golden Hour</div>
+                  <div class="step-desc">Dual-network parallel simulation across Traffic & Hospital networks, minute-by-minute coordination tracking</div>
                 </div>
               </div>
               <div class="workflow-item">
                 <span class="step-num">04</span>
                 <div class="step-info">
-                  <div class="step-title">Report Generation</div>
-                  <div class="step-desc">ReportAgent uses a rich toolset for deep interaction with post-simulation environments</div>
+                  <div class="step-title">VahanAI Optimization</div>
+                  <div class="step-desc">VahanAI Optimizer analyzes simulation memory, identifies bottlenecks & generates intervention recommendations</div>
                 </div>
               </div>
               <div class="workflow-item">
                 <span class="step-num">05</span>
                 <div class="step-info">
-                  <div class="step-title">Deep Interaction</div>
-                  <div class="step-desc">Chat with any individual in the simulated world or interact with the ReportAgent</div>
+                  <div class="step-title">Deep Debrief</div>
+                  <div class="step-desc">Debrief any response unit or query the VahanAI Optimizer for targeted bottleneck analysis</div>
                 </div>
               </div>
             </div>
@@ -124,7 +124,7 @@
             <!-- Upload Area -->
             <div class="console-section">
               <div class="console-header">
-                <span class="console-label">01 / Reality Seeds</span>
+                <span class="console-label">01 / Emergency Scenario</span>
                 <span class="console-meta">Supported formats: PDF, MD, TXT</span>
               </div>
               
@@ -176,11 +176,11 @@
                 <textarea
                   v-model="formData.simulationRequirement"
                   class="code-input"
-                  placeholder="// Enter simulation or prediction requirements in natural language (e.g., What public opinion trends would emerge if Wuhan University revoked the disciplinary action against Xiao?)"
+                  placeholder="// Enter the emergency scenario in natural language (e.g., Fetal distress reported at 34 Gulmohar Road Sector 12. Patient is 28yr female, 36 weeks gestation. Simulate the full Golden Hour response and identify bottlenecks.)"
                   rows="6"
                   :disabled="loading"
                 ></textarea>
-                <div class="model-badge">Engine: MiroFish-V1.0</div>
+                <div class="model-badge">Engine: VahanAI-V1.0</div>
               </div>
             </div>
 

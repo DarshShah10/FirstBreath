@@ -1,0 +1,356 @@
+# Emergency Resources Configuration
+# Pre-loaded healthcare resources for MiroFish Simulation Engine
+# Location: Delhi/NCR Region (India) - Sector 12 Noida area
+
+# Hospitals with their capabilities and current status
+hospitals:
+  - hospital_id: "hospital_central"
+    name: "Central Maternity Hospital"
+    level: "tertiary"  # Level III NICU, full OB capability
+    location:
+      lat: 28.6139
+      lng: 77.2090
+      address: "Sector 12, Noida, UP"
+    obgyn_beds: 50
+    nicu_beds: 20
+    ot_count: 4
+    on_call_obgyn: 3
+    on_call_anesthesiologist: 2
+    transfer_time_minutes: 15
+    blood_bank_status: "adequate"
+    status: "available"
+    contact_phone: "+91-120-222-3333"
+    capabilities:
+      - obgyn
+      - nicu
+      - ot
+      - blood_bank
+      - icu
+      - anesthesiology
+
+  - hospital_id: "hospital_district"
+    name: "District General Hospital"
+    level: "secondary"
+    location:
+      lat: 28.6239
+      lng: 77.2190
+      address: "Sector 22, Noida, UP"
+    obgyn_beds: 30
+    nicu_beds: 8
+    ot_count: 2
+    on_call_obgyn: 2
+    on_call_anesthesiologist: 1
+    transfer_time_minutes: 12
+    blood_bank_status: "limited"
+    status: "available"
+    contact_phone: "+91-120-222-4444"
+    capabilities:
+      - obgyn
+      - nicu
+      - ot
+
+  - hospital_id: "hospital_emergency"
+    name: "Emergency Medical Center"
+    level: "tertiary"
+    location:
+      lat: 28.6039
+      lng: 77.2290
+      address: "Sector 15, Noida, UP"
+    obgyn_beds: 20
+    nicu_beds: 15
+    ot_count: 3
+    on_call_obgyn: 2
+    on_call_anesthesiologist: 2
+    transfer_time_minutes: 10
+    blood_bank_status: "adequate"
+    status: "available"
+    contact_phone: "+91-120-222-5555"
+    capabilities:
+      - obgyn
+      - nicu
+      - ot
+      - blood_bank
+      - trauma
+
+# Ambulances with their equipment and current status
+ambulances:
+  - ambulance_id: "amb_001"
+    name: "Ambulance Unit 001"
+    base_location:
+      lat: 28.6089
+      lng: 77.2040
+      address: "Station Alpha, Sector 12"
+    status: "available"
+    equipped_for:
+      - neonatal_resuscitation
+      - emergency_delivery
+      - advanced_life_support
+    crew_count: 3
+    has_paramedic: true
+
+  - ambulance_id: "amb_002"
+    name: "Ambulance Unit 002"
+    base_location:
+      lat: 28.6189
+      lng: 77.2140
+      address: "Station Beta, Sector 15"
+    status: "available"
+    equipped_for:
+      - neonatal_resuscitation
+      - emergency_delivery
+    crew_count: 2
+    has_paramedic: false
+
+  - ambulance_id: "amb_003"
+    name: "Ambulance Unit 003"
+    base_location:
+      lat: 28.6289
+      lng: 77.2240
+      address: "Station Gamma, Sector 22"
+    status: "available"
+    equipped_for:
+      - advanced_life_support
+      - emergency_delivery
+    crew_count: 3
+    has_paramedic: true
+
+  - ambulance_id: "amb_004"
+    name: "Mobile ICU Unit"
+    base_location:
+      lat: 28.6139
+      lng: 77.2090
+      address: "Central Hospital Base"
+    status: "available"
+    equipped_for:
+      - neonatal_resuscitation
+      - emergency_delivery
+      - advanced_life_support
+      - icu_support
+    crew_count: 4
+    has_paramedic: true
+
+# Medical staff configuration
+staff:
+  - staff_id: "staff_obgyn_001"
+    name: "Dr. Priya Sharma"
+    specialization: "obstetrician"
+    hospital_id: "hospital_central"
+    status: "off_duty"
+    on_call: true
+    response_time_minutes: 15
+    contact_phone: "+91-98765-00001"
+
+  - staff_id: "staff_obgyn_002"
+    name: "Dr. Anjali Verma"
+    specialization: "obstetrician"
+    hospital_id: "hospital_central"
+    status: "off_duty"
+    on_call: true
+    response_time_minutes: 20
+    contact_phone: "+91-98765-00002"
+
+  - staff_id: "staff_obgyn_003"
+    name: "Dr. Sunita Gupta"
+    specialization: "obstetrician"
+    hospital_id: "hospital_district"
+    status: "off_duty"
+    on_call: true
+    response_time_minutes: 12
+    contact_phone: "+91-98765-00003"
+
+  - staff_id: "staff_anesth_001"
+    name: "Dr. Rajesh Kumar"
+    specialization: "anesthesiologist"
+    hospital_id: "hospital_central"
+    status: "off_duty"
+    on_call: true
+    response_time_minutes: 15
+    contact_phone: "+91-98765-00010"
+
+  - staff_id: "staff_neonat_001"
+    name: "Dr. Meera Singh"
+    specialization: "neonatologist"
+    hospital_id: "hospital_central"
+    status: "off_duty"
+    on_call: true
+    response_time_minutes: 20
+    contact_phone: "+91-98765-00011"
+
+  - staff_id: "staff_midwife_001"
+    name: "Nurse Kavita Devi"
+    specialization: "midwife"
+    hospital_id: "hospital_district"
+    status: "off_duty"
+    on_call: true
+    response_time_minutes: 10
+    contact_phone: "+91-98765-00020"
+
+# Blood banks
+blood_banks:
+  - blood_bank_id: "blood_bank_central"
+    name: "Central Blood Bank"
+    location:
+      lat: 28.6139
+      lng: 77.2090
+      address: "Central Hospital, Sector 12"
+    hospital_id: "hospital_central"
+    status: "available"
+    inventory:
+      a_positive: 15
+      a_negative: 8
+      b_positive: 12
+      b_negative: 6
+      ab_positive: 6
+      ab_negative: 3
+      o_positive: 20
+      o_negative: 12
+
+  - blood_bank_id: "blood_bank_district"
+    name: "District Blood Bank"
+    location:
+      lat: 28.6239
+      lng: 77.2190
+      address: "District Hospital, Sector 22"
+    hospital_id: "hospital_district"
+    status: "available"
+    inventory:
+      a_positive: 10
+      a_negative: 5
+      b_positive: 8
+      b_negative: 4
+      ab_positive: 4
+      ab_negative: 2
+      o_positive: 15
+      o_negative: 8
+
+# Transport routes between key locations
+# These will be dynamically matched based on coordinates
+routes:
+  # Patient to Central Hospital routes
+  - route_id: "route_patient_central_main"
+    from_location:
+      lat: 28.6100
+      lng: 77.2000
+      address: "Patient Location - Sector 12"
+    to_location:
+      lat: 28.6139
+      lng: 77.2090
+      address: "Central Maternity Hospital"
+    distance_km: 1.5
+    typical_duration_minutes: 5
+    traffic_multiplier: 1.5
+    alternate_route_available: true
+    alternate_route_id: "route_patient_central_alt"
+    current_status: "clear"
+
+  - route_id: "route_patient_central_alt"
+    from_location:
+      lat: 28.6100
+      lng: 77.2000
+      address: "Patient Location - Sector 12"
+    to_location:
+      lat: 28.6139
+      lng: 77.2090
+      address: "Central Maternity Hospital (Alternate)"
+    distance_km: 2.2
+    typical_duration_minutes: 7
+    traffic_multiplier: 1.1
+    alternate_route_available: false
+    current_status: "clear"
+
+  # Patient to District Hospital routes
+  - route_id: "route_patient_district"
+    from_location:
+      lat: 28.6100
+      lng: 77.2000
+      address: "Patient Location - Sector 12"
+    to_location:
+      lat: 28.6239
+      lng: 77.2190
+      address: "District General Hospital"
+    distance_km: 3.5
+    typical_duration_minutes: 10
+    traffic_multiplier: 1.3
+    alternate_route_available: true
+    alternate_route_id: "route_patient_district_alt"
+    current_status: "clear"
+
+  - route_id: "route_patient_district_alt"
+    from_location:
+      lat: 28.6100
+      lng: 77.2000
+      address: "Patient Location - Sector 12"
+    to_location:
+      lat: 28.6239
+      lng: 77.2190
+      address: "District Hospital (Alternate)"
+    distance_km: 4.0
+    typical_duration_minutes: 12
+    traffic_multiplier: 1.0
+    alternate_route_available: false
+    current_status: "clear"
+
+  # Patient to Emergency Center routes
+  - route_id: "route_patient_emergency"
+    from_location:
+      lat: 28.6100
+      lng: 77.2000
+      address: "Patient Location - Sector 12"
+    to_location:
+      lat: 28.6039
+      lng: 77.2290
+      address: "Emergency Medical Center"
+    distance_km: 4.2
+    typical_duration_minutes: 12
+    traffic_multiplier: 1.4
+    alternate_route_available: true
+    alternate_route_id: "route_patient_emergency_alt"
+    current_status: "clear"
+
+  - route_id: "route_patient_emergency_alt"
+    from_location:
+      lat: 28.6100
+      lng: 77.2000
+      address: "Patient Location - Sector 12"
+    to_location:
+      lat: 28.6039
+      lng: 77.2290
+      address: "Emergency Medical Center (Alternate)"
+    distance_km: 5.0
+    typical_duration_minutes: 14
+    traffic_multiplier: 1.0
+    alternate_route_available: false
+    current_status: "clear"
+
+# City conditions that can affect response
+city_conditions:
+  # Common road blocks or events
+  events:
+    - event_id: "festival_main_road"
+      name: "Spring Festival Parade"
+      affected_route: "route_patient_central_main"
+      status: "inactive"  # inactive, active, ended
+      start_time: "2026-03-20T09:00:00"
+      end_time: "2026-03-20T12:00:00"
+
+    - event_id: "construction_ring_road"
+      name: "Ring Road Construction"
+      affected_route: "route_patient_emergency_alt"
+      status: "active"
+      expected_duration_hours: 48
+
+  # Traffic patterns (for simulation)
+  traffic_patterns:
+    peak_morning: "07:00-09:00"
+    peak_evening: "17:00-19:00"
+    normal_multiplier: 1.0
+    peak_multiplier: 1.5
+
+  # Weather conditions
+  weather:
+    default_status: "clear"  # clear, light_rain, heavy_rain, fog
+    traffic_impact:
+      clear: 1.0
+      light_rain: 1.2
+      heavy_rain: 1.5
+      fog: 1.3

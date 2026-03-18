@@ -32,17 +32,22 @@ def main():
             print(f"  - {err}")
         print("\n请检查 .env 文件中的配置")
         sys.exit(1)
-    
-    # 创建应用
-    app = create_app()
-    
+
+    # 创建应用（包含 SocketIO）
+    result = create_app()
+    app = result[0] if isinstance(result, tuple) else result
+    socketio = result[1] if isinstance(result, tuple) else None
+
     # 获取运行配置
     host = os.environ.get('FLASK_HOST', '0.0.0.0')
     port = int(os.environ.get('FLASK_PORT', 5001))
     debug = Config.DEBUG
-    
-    # 启动服务
-    app.run(host=host, port=port, debug=debug, threaded=True)
+
+    # 启动服务（使用 SocketIO 如果可用）
+    if socketio:
+        socketio.run(app, host=host, port=port, debug=debug)
+    else:
+        app.run(host=host, port=port, debug=debug, threaded=True)
 
 
 if __name__ == '__main__':

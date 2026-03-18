@@ -93,7 +93,6 @@ def build_event_config_prompt(
     simulation_requirement: str,
     type_info: str,
 ) -> str:
-    """Build the LLM prompt for generating initial emergency dispatch events."""
     return f"""Based on the following emergency scenario, generate the initial dispatch events.
 
 Emergency scenario: {simulation_requirement}
@@ -104,28 +103,30 @@ Emergency scenario: {simulation_requirement}
 {type_info}
 
 ## Task
-Generate an initial dispatch event configuration:
-- Extract critical alert keywords (medical condition, location, severity level)
-- Describe the expected response chain timeline
-- Design initial broadcast messages; **each must specify a poster_type (which unit sends it)**
+Generate an initial dispatch event configuration.
 
-**Important**: poster_type must match an available unit type. Examples:
-- 108 distress call or initial alert → poster_type: "Dispatcher"
-- Hospital bed / OT status update → poster_type: "Hospital"
-- Ambulance ETA broadcast → poster_type: "ALS_Ambulance" or "BLS_Ambulance"
-- Blood availability confirmation → poster_type: "BloodBank"
-- Doctor on-call status → poster_type: "Doctor_Surgeon"
+**CRITICAL RULE — You MUST include at least one bottleneck signal in initial_posts:**
+A bottleneck is a unit that reports being unavailable, delayed, or at capacity at T+0.
+This creates a realistic failure condition for the optimizer to analyze.
+
+Examples of bottleneck signals:
+- Primary OT occupied: poster_type "OperatingTheater", content reports OT-1 is in active surgery
+- Nearest ambulance off-route: poster_type "ALS_Ambulance", content reports crew responding to prior call
+- Blood type unavailable: poster_type "BloodBank", content reports O-Neg stock critically low
+- Surgeon unavailable: poster_type "Doctor_Surgeon", content reports both on-call surgeons in procedure
+
+**poster_type must match an available unit type exactly.**
 
 Return JSON format (no markdown):
 {{
-    "hot_topics": ["keyword1 (e.g. FetalDistress)", "keyword2 (e.g. Sector12)", "keyword3 (e.g. GoldenHour)"],
-    "narrative_direction": "<expected response chain timeline, e.g.: Dispatch(T+0) → AmbulanceDispatch(T+2) → PatientContact(T+12) → HospitalHandoff(T+35) → OTEntry(T+45)>",
+    "hot_topics": ["keyword1", "keyword2", "keyword3"],
+    "narrative_direction": "<timeline: Dispatch(T+0) → [BOTTLENECK at T+X: specify unit and failure] → PatientContact(T+Y) → [CONSEQUENCE: delay/escalation] → Resolution(T+60)>",
     "initial_posts": [
-        {{"content": "PRIORITY-1 ALERT: Fetal distress reported. 34 Gulmohar Road, Sector 12. Female patient, 28yr, 36wk gestation. Vitals critical. ALL UNITS RESPOND.", "poster_type": "Dispatcher"}},
-        {{"content": "AMB-07 responding to Sector 12. ETA 12 minutes via NH-48. Traffic nominal. ALS crew standing by.", "poster_type": "ALS_Ambulance"}},
-        {{"content": "City General ER: Trauma bay 2 cleared. OT-3 on standby. Neonatal team alerted. Blood O-Neg confirmed available.", "poster_type": "Hospital"}}
+        {{"content": "PRIORITY-1 ALERT: [emergency description, location, patient condition]", "poster_type": "Dispatcher"}},
+        {{"content": "[Primary ambulance or resource reports a PROBLEM — delayed, occupied, unavailable]", "poster_type": "<unit_type>"}},
+        {{"content": "[Secondary unit responds or hospital confirms prep status]", "poster_type": "<unit_type>"}}
     ],
-    "reasoning": "<brief explanation of the emergency scenario and expected bottlenecks>"
+    "reasoning": "<identify the specific bottleneck designed into this scenario and what intervention would fix it>"
 }}"""
 
 

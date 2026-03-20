@@ -35,8 +35,7 @@ class SimulationStatus(str, Enum):
 
 class PlatformType(str, Enum):
     """Platform type."""
-    TWITTER = "twitter"
-    REDDIT = "reddit"
+    EMERGENCY = "emergency"
 
 
 @dataclass
@@ -46,10 +45,6 @@ class SimulationState:
     simulation_id: str
     project_id: str
     graph_id: str
-
-    # Platform enablement
-    enable_twitter: bool = True
-    enable_reddit: bool = True
 
     # Status
     status: SimulationStatus = SimulationStatus.CREATED
@@ -65,8 +60,7 @@ class SimulationState:
 
     # Runtime data
     current_round: int = 0
-    twitter_status: str = "not_started"
-    reddit_status: str = "not_started"
+    emergency_status: str = "not_started"
 
     # Timestamps
     created_at: str = field(default_factory=lambda: datetime.now().isoformat())
@@ -81,8 +75,6 @@ class SimulationState:
             "simulation_id": self.simulation_id,
             "project_id": self.project_id,
             "graph_id": self.graph_id,
-            "enable_twitter": self.enable_twitter,
-            "enable_reddit": self.enable_reddit,
             "status": self.status.value,
             "entities_count": self.entities_count,
             "profiles_count": self.profiles_count,
@@ -90,8 +82,7 @@ class SimulationState:
             "config_generated": self.config_generated,
             "config_reasoning": self.config_reasoning,
             "current_round": self.current_round,
-            "twitter_status": self.twitter_status,
-            "reddit_status": self.reddit_status,
+            "emergency_status": self.emergency_status,
             "created_at": self.created_at,
             "updated_at": self.updated_at,
             "error": self.error,
@@ -172,8 +163,6 @@ class SimulationManager:
             simulation_id=simulation_id,
             project_id=data.get("project_id", ""),
             graph_id=data.get("graph_id", ""),
-            enable_twitter=data.get("enable_twitter", True),
-            enable_reddit=data.get("enable_reddit", True),
             status=SimulationStatus(data.get("status", "created")),
             entities_count=data.get("entities_count", 0),
             profiles_count=data.get("profiles_count", 0),
@@ -181,8 +170,7 @@ class SimulationManager:
             config_generated=data.get("config_generated", False),
             config_reasoning=data.get("config_reasoning", ""),
             current_round=data.get("current_round", 0),
-            twitter_status=data.get("twitter_status", "not_started"),
-            reddit_status=data.get("reddit_status", "not_started"),
+            emergency_status=data.get("emergency_status", "not_started"),
             created_at=data.get("created_at", datetime.now().isoformat()),
             updated_at=data.get("updated_at", datetime.now().isoformat()),
             error=data.get("error"),
@@ -195,17 +183,13 @@ class SimulationManager:
         self,
         project_id: str,
         graph_id: str,
-        enable_twitter: bool = True,
-        enable_reddit: bool = True,
     ) -> SimulationState:
         """
-        Create a new simulation.
+        Create a new emergency response simulation.
 
         Args:
             project_id: Project ID.
             graph_id: Zep graph ID.
-            enable_twitter: Whether to enable the Twitter simulation.
-            enable_reddit: Whether to enable the Reddit simulation.
 
         Returns:
             SimulationState
@@ -217,8 +201,6 @@ class SimulationManager:
             simulation_id=simulation_id,
             project_id=project_id,
             graph_id=graph_id,
-            enable_twitter=enable_twitter,
-            enable_reddit=enable_reddit,
             status=SimulationStatus.CREATED,
         )
 
@@ -334,15 +316,8 @@ class SimulationManager:
                         item_name=msg,
                     )
 
-            # Set up real-time save path (prefer Reddit JSON format)
-            realtime_output_path = None
-            realtime_platform = "reddit"
-            if state.enable_reddit:
-                realtime_output_path = os.path.join(sim_dir, "reddit_profiles.json")
-                realtime_platform = "reddit"
-            elif state.enable_twitter:
-                realtime_output_path = os.path.join(sim_dir, "twitter_profiles.csv")
-                realtime_platform = "twitter"
+            # Set up real-time save path for emergency response unit profiles
+            realtime_output_path = os.path.join(sim_dir, "unit_profiles.json")
 
             profiles = generator.generate_profiles_from_entities(
                 entities=filtered.entities,
@@ -351,15 +326,12 @@ class SimulationManager:
                 graph_id=state.graph_id,           # for Zep retrieval
                 parallel_count=parallel_profile_count,
                 realtime_output_path=realtime_output_path,
-                output_platform=realtime_platform,
+                output_platform="emergency",
             )
 
             state.profiles_count = len(profiles)
 
             # Save profile files
-            # Note: Twitter uses CSV format; Reddit uses JSON format.
-            # Reddit was already saved incrementally during generation;
-            # save once more here to ensure completeness.
             if progress_callback:
                 progress_callback(
                     "generating_profiles",
@@ -369,20 +341,11 @@ class SimulationManager:
                     total=total_entities,
                 )
 
-            if state.enable_reddit:
-                generator.save_profiles(
-                    profiles=profiles,
-                    file_path=os.path.join(sim_dir, "reddit_profiles.json"),
-                    platform="reddit",
-                )
-
-            if state.enable_twitter:
-                # Twitter requires CSV format per OASIS specification
-                generator.save_profiles(
-                    profiles=profiles,
-                    file_path=os.path.join(sim_dir, "twitter_profiles.csv"),
-                    platform="twitter",
-                )
+            generator.save_profiles(
+                profiles=profiles,
+                file_path=os.path.join(sim_dir, "unit_profiles.json"),
+                platform="emergency",
+            )
 
             if progress_callback:
                 progress_callback(
@@ -421,8 +384,6 @@ class SimulationManager:
                 simulation_requirement=simulation_requirement,
                 document_text=document_text,
                 entities=filtered.entities,
-                enable_twitter=state.enable_twitter,
-                enable_reddit=state.enable_reddit,
             )
 
             if progress_callback:

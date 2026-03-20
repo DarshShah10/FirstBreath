@@ -1,31 +1,32 @@
 """
 simulation_config_generator package.
 
-Intelligently generates simulation parameters using an LLM.
+VahanAI dispatch simulation configuration generator.
 
 Public API:
     SimulationConfigGenerator — main service class
     SimulationParameters      — complete parameter configuration
-    AgentActivityConfig       — per-agent activity configuration
-    TimeSimulationConfig      — time simulation configuration
-    EventConfig               — event configuration
-    PlatformConfig            — platform-specific configuration
+    UnitConfig               — per-unit configuration
+    CityCondition            — city conditions
+    DistressSignal           — emergency signal
 """
 
 from .models import (
-    AgentActivityConfig,
-    EventConfig,
-    PlatformConfig,
+    UnitConfig,
+    CityCondition,
+    DistressSignal,
     SimulationParameters,
-    TimeSimulationConfig,
+    # Backward compatibility aliases
+    AgentActivityConfig as UnitConfig,
+    TimeSimulationConfig as SimulationConfig,
+    EventConfig as DistressSignal,
 )
 from .service import SimulationConfigGenerator
 
 __all__ = [
     "SimulationConfigGenerator",
     "SimulationParameters",
-    "AgentActivityConfig",
-    "TimeSimulationConfig",
-    "EventConfig",
-    "PlatformConfig",
+    "UnitConfig",
+    "CityCondition",
+    "DistressSignal",
 ]

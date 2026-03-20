@@ -1,5 +1,8 @@
 """
-Data models and constants for the simulation configuration generator.
+Data models for VahanAI Emergency Response Dispatch Simulation.
+
+Core concept: When a distress signal arrives, simulate the ENTIRE response chain
+to identify where it will break, then output specific interventions.
 """
 
 import json
@@ -8,160 +11,153 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 
-# China timezone activity configuration (Beijing time)
-CHINA_TIMEZONE_CONFIG = {
-    # Late-night hours (almost no activity)
-    "dead_hours": [0, 1, 2, 3, 4, 5],
-    # Morning hours (gradually waking up)
-    "morning_hours": [6, 7, 8],
-    # Work hours
-    "work_hours": [9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
-    # Evening peak (most active)
-    "peak_hours": [19, 20, 21, 22],
-    # Night hours (activity declining)
-    "night_hours": [23],
-    # Activity multipliers
-    "activity_multipliers": {
-        "dead": 0.05,       # Almost no one awake in the early morning
-        "morning": 0.4,     # Gradually becoming active in the morning
-        "work": 0.7,        # Moderate activity during work hours
-        "peak": 1.5,        # Evening peak
-        "night": 0.5,       # Declining late at night
-    },
-}
-
-
 @dataclass
-class AgentActivityConfig:
-    """Activity configuration for a single agent."""
+class UnitConfig:
+    """Configuration for a single emergency response unit."""
 
     agent_id: int
     entity_uuid: str
     entity_name: str
-    entity_type: str
+    entity_type: str  # ambulance, doctor, hospital, blood_bank, ot, dispatcher
 
-    # Activity level (0.0–1.0)
-    activity_level: float = 0.5
+    # Current status (from hospital graph)
+    is_available: bool = True
+    current_location: str = ""
+    distance_km: float = 0.0
 
-    # Posting frequency (expected posts per hour)
-    posts_per_hour: float = 1.0
-    comments_per_hour: float = 2.0
+    # Response capability
+    response_time_min: int = 5  # minutes to reach scene
+    prep_time_min: int = 0  # prep time (for OT, blood bank)
 
-    # Active time slots (24-hour clock, 0–23)
-    active_hours: List[int] = field(default_factory=lambda: list(range(8, 23)))
+    # Dependencies
+    requires: List[str] = field(default_factory=list)  # e.g., ["ot", "blood"]
+    provides: List[str] = field(default_factory=list)  # e.g., ["surgery", "blood"]
 
-    # Response speed (reaction delay to hot events, in simulated minutes)
-    response_delay_min: int = 5
-    response_delay_max: int = 60
-
-    # Sentiment bias (-1.0 to 1.0, negative to positive)
-    sentiment_bias: float = 0.0
-
-    # Stance on specific topics
-    stance: str = "neutral"  # supportive, opposing, neutral, observer
-
-    # Influence weight (probability that other agents see this agent's posts)
-    influence_weight: float = 1.0
+    # Influence on outcome
+    criticality: float = 1.0  # 0.5 = can substitute, 1.0 = single point of failure
 
 
 @dataclass
-class TimeSimulationConfig:
-    """Time simulation configuration (based on Chinese daily schedule habits)."""
+class CityCondition:
+    """Current city conditions affecting response."""
 
-    # Total simulation duration (simulated hours)
-    total_simulation_hours: int = 72  # default: simulate 72 hours (3 days)
+    # Traffic
+    traffic_level: str = "normal"  # normal, heavy, blocked
+    blocked_routes: List[str] = field(default_factory=list)
+    traffic_delay_min: int = 0
 
-    # Time represented per round (simulated minutes) — default 60 min to speed up time flow
-    minutes_per_round: int = 60
+    # Special conditions
+    is_festival: bool = False
+    festival_name: str = ""
+    weather: str = "clear"  # clear, rain, storm
 
-    # Range of agents activated per hour
-    agents_per_hour_min: int = 5
-    agents_per_hour_max: int = 20
-
-    # Peak hours (19–22, most active period for Chinese users)
-    peak_hours: List[int] = field(default_factory=lambda: [19, 20, 21, 22])
-    peak_activity_multiplier: float = 1.5
-
-    # Off-peak hours (00–05, almost no activity)
-    off_peak_hours: List[int] = field(default_factory=lambda: [0, 1, 2, 3, 4, 5])
-    off_peak_activity_multiplier: float = 0.05  # extremely low activity in the early hours
-
-    # Morning hours
-    morning_hours: List[int] = field(default_factory=lambda: [6, 7, 8])
-    morning_activity_multiplier: float = 0.4
-
-    # Work hours
-    work_hours: List[int] = field(
-        default_factory=lambda: [9, 10, 11, 12, 13, 14, 15, 16, 17, 18]
-    )
-    work_activity_multiplier: float = 0.7
+    # Impact on response time
+    effective_delay_min: int = 0
 
 
 @dataclass
-class EventConfig:
-    """Event configuration."""
+class DistressSignal:
+    """Emergency distress signal that triggers simulation."""
 
-    # Initial posts (trigger events at simulation start)
-    initial_posts: List[Dict[str, Any]] = field(default_factory=list)
+    signal_type: str  # A (FirstBreath), B (108 call), C (nurse flag), D (mass casualty)
+    severity: int = 8  # 1-10, 10 = most severe
+    time_window_min: int = 20  # Golden Hour or window before outcome degrades
+    location: str = ""
+    patient_condition: str = ""
 
-    # Scheduled events (triggered at specific simulation times)
-    scheduled_events: List[Dict[str, Any]] = field(default_factory=list)
-
-    # Trending topic keywords
-    hot_topics: List[str] = field(default_factory=list)
-
-    # Narrative direction
-    narrative_direction: str = ""
+    # Resources needed
+    needs_ambulance: bool = True
+    needs_blood: bool = False
+    blood_type: str = ""
+    needs_ot: bool = False
+    needs_specialist: str = ""  # e.g., "cardiologist", "neurosurgeon"
 
 
 @dataclass
-class PlatformConfig:
-    """Platform-specific configuration."""
+class SimulationConfig:
+    """Configuration for a single dispatch simulation run."""
 
-    platform: str  # twitter or reddit
+    # What we're simulating
+    distress_signal: DistressSignal
 
-    # Recommendation algorithm weights
-    recency_weight: float = 0.4      # recency
-    popularity_weight: float = 0.3   # popularity
-    relevance_weight: float = 0.3    # relevance
+    # Available units (from hospital graph)
+    available_units: List[UnitConfig] = field(default_factory=list)
 
-    # Viral spread threshold (number of interactions before triggering amplification)
-    viral_threshold: int = 10
+    # Current city conditions
+    city_condition: CityCondition = field(default_factory=CityCondition)
 
-    # Echo chamber effect strength (degree of similar-opinion clustering)
-    echo_chamber_strength: float = 0.5
+    # Simulation parameters
+    simulation_id: str = ""
+    project_id: str = ""
+    graph_id: str = ""
+
+
+@dataclass
+class SimulationResult:
+    """Result of a single simulation run."""
+
+    # Did resources reach in time?
+    success: bool = False
+    time_to_scene_min: float = 0.0
+    time_to_hospital_min: float = 0.0
+
+    # Where did it fail?
+    failure_point: str = ""  # "dispatch", "en_route", "handoff", "ot_prep", "blood"
+    failure_reason: str = ""
+
+    # Bottleneck identified
+    bottleneck_unit: str = ""
+    bottleneck_type: str = ""  # "unavailable", "delayed", "occupied", "missing"
+
+    # Time saved if bottleneck resolved
+    time_saved_min: float = 0.0
+
+
+@dataclass
+class AggregatedResult:
+    """Aggregated results from multiple simulation runs."""
+
+    # Success probability
+    success_probability: float = 0.0  # 0.0 to 1.0
+
+    # Primary bottleneck (most common failure point)
+    primary_bottleneck: str = ""
+    bottleneck_frequency: float = 0.0  # How often this bottleneck appeared
+
+    # Recommended intervention
+    intervention_action: str = ""
+    intervention_trigger: str = ""  # "now", "T+5", "if X fails"
+    expected_time_saved: float = 0.0
+
+    # Cascade risk
+    cascade_risk: List[str] = field(default_factory=list)  # Other emergencies affected
 
 
 @dataclass
 class SimulationParameters:
     """Complete simulation parameter configuration."""
 
-    # Basic information
+    # Basic info
     simulation_id: str
     project_id: str
     graph_id: str
     simulation_requirement: str
 
-    # Time configuration
-    time_config: TimeSimulationConfig = field(default_factory=TimeSimulationConfig)
+    # Unit configurations
+    unit_configs: List[UnitConfig] = field(default_factory=list)
 
-    # Agent configuration list
-    agent_configs: List[AgentActivityConfig] = field(default_factory=list)
+    # City conditions
+    city_condition: CityCondition = field(default_factory=CityCondition)
 
-    # Event configuration
-    event_config: EventConfig = field(default_factory=EventConfig)
+    # Distress signal
+    distress_signal: DistressSignal = field(default_factory=DistressSignal)
 
-    # Platform configurations
-    twitter_config: Optional[PlatformConfig] = None
-    reddit_config: Optional[PlatformConfig] = None
-
-    # LLM configuration
+    # LLM config
     llm_model: str = ""
     llm_base_url: str = ""
 
-    # Generation metadata
+    # Metadata
     generated_at: str = field(default_factory=lambda: datetime.now().isoformat())
-    generation_reasoning: str = ""  # LLM reasoning notes
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
@@ -170,17 +166,20 @@ class SimulationParameters:
             "project_id": self.project_id,
             "graph_id": self.graph_id,
             "simulation_requirement": self.simulation_requirement,
-            "time_config": asdict(self.time_config),
-            "agent_configs": [asdict(a) for a in self.agent_configs],
-            "event_config": asdict(self.event_config),
-            "twitter_config": asdict(self.twitter_config) if self.twitter_config else None,
-            "reddit_config": asdict(self.reddit_config) if self.reddit_config else None,
+            "unit_configs": [asdict(u) for u in self.unit_configs],
+            "city_condition": asdict(self.city_condition),
+            "distress_signal": asdict(self.distress_signal),
             "llm_model": self.llm_model,
             "llm_base_url": self.llm_base_url,
             "generated_at": self.generated_at,
-            "generation_reasoning": self.generation_reasoning,
         }
 
     def to_json(self, indent: int = 2) -> str:
         """Convert to JSON string."""
         return json.dumps(self.to_dict(), ensure_ascii=False, indent=indent)
+
+
+# Backward compatibility aliases
+AgentActivityConfig = UnitConfig
+TimeSimulationConfig = SimulationConfig
+EventConfig = DistressSignal

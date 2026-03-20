@@ -5,7 +5,7 @@
       <div class="nav-brand">VAHAN.AI</div>
       <div class="nav-links">
         <a href="https://github.com/666ghj/MiroFish" target="_blank" class="github-link">
-          Visit our GitHub page <span class="arrow">↗</span>
+          GitHub <span class="arrow">↗</span>
         </a>
       </div>
     </nav>
@@ -365,6 +365,23 @@ const startSimulation = () => {
 }
 
 .github-link:hover {
+  opacity: 0.8;
+}
+
+.dashboard-link {
+  color: #FF4500;
+  text-decoration: none;
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: opacity 0.2s;
+  margin-right: 20px;
+}
+
+.dashboard-link:hover {
   opacity: 0.8;
 }
 

@@ -1,0 +1,37 @@
+================================================================================
+VAHANAI EMERGENCY DISPATCH - SIMPLE TEST CASE
+Cardiac Emergency
+================================================================================
+
+SCENARIO:
+108 call: 55yr male, chest pain, Koregaon Park, Pune.
+Nearest hospital: Jehangir Hospital (3.2km).
+Time Window: 30 minutes for cardiac intervention.
+
+CITY CONDITIONS:
+- Traffic: Normal
+- Weather: Clear
+
+AVAILABLE UNITS:
+- AMB-07: 2.8km away, available, ETA 8 min
+- AMB-03: 5.1km away, available, ETA 12 min
+- Cath Lab (Jehangir): Available
+- Dr. Desai (Cardiologist): Available
+- Blood Bank: Normal supply
+
+================================================================================
+TEST PROMPT:
+================================================================================
+
+"108 call: 55yr male, chest pain, Koregaon Park, Pune. Suspected cardiac emergency.
+Nearest ambulance AMB-07 is 2.8km away, ETA 8 minutes. Jehangir Hospital cath lab available.
+Dr. Desai on call. Run dispatch simulation."
+
+================================================================================
+EXPECTED BOTTLENECK ANALYSIS:
+================================================================================
+
+Success Probability: ~85%
+Bottleneck: Traffic or AMB-07 availability
+Intervention: AMB-07 dispatch, pre-alert cath lab at T+2
+

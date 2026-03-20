@@ -225,11 +225,9 @@ def create_simulation():
     请求（JSON）：
         {
             "project_id": "proj_xxxx",      // 必填
-            "graph_id": "mirofish_xxxx",    // 可选，如不提供则从project获取
-            "enable_twitter": true,          // 可选，默认true
-            "enable_reddit": true            // 可选，默认true
+            "graph_id": "mirofish_xxxx"     // 可选，如不提供则从project获取
         }
-    
+
     返回：
         {
             "success": true,
@@ -238,42 +236,38 @@ def create_simulation():
                 "project_id": "proj_xxxx",
                 "graph_id": "mirofish_xxxx",
                 "status": "created",
-                "enable_twitter": true,
-                "enable_reddit": true,
                 "created_at": "2025-12-01T10:00:00"
             }
         }
     """
     try:
         data = request.get_json() or {}
-        
+
         project_id = data.get('project_id')
         if not project_id:
             return jsonify({
                 "success": False,
                 "error": "请提供 project_id"
             }), 400
-        
+
         project = ProjectManager.get_project(project_id)
         if not project:
             return jsonify({
                 "success": False,
                 "error": f"项目不存在: {project_id}"
             }), 404
-        
+
         graph_id = data.get('graph_id') or project.graph_id
         if not graph_id:
             return jsonify({
                 "success": False,
                 "error": "项目尚未构建图谱，请先调用 /api/graph/build"
             }), 400
-        
+
         manager = SimulationManager()
         state = manager.create_simulation(
             project_id=project_id,
             graph_id=graph_id,
-            enable_twitter=data.get('enable_twitter', True),
-            enable_reddit=data.get('enable_reddit', True),
         )
         
         return jsonify({

@@ -266,17 +266,19 @@ class Neo4jToolsService:
     def get_simulation_context(
         self,
         graph_id: str,
-        simulation_id: str
+        simulation_id: str = None,
+        simulation_requirement: str = None
     ) -> Dict[str, Any]:
         """
         Get simulation context from the graph.
 
         Args:
             graph_id: The graph ID
-            simulation_id: The simulation ID
+            simulation_id: The simulation ID (optional)
+            simulation_requirement: The simulation requirement description (optional)
 
         Returns:
-            Context dictionary
+            Context dictionary with graph statistics and related facts
         """
         # Get all nodes as context
         nodes = self.reader.get_all_nodes(graph_id)
@@ -285,12 +287,40 @@ class Neo4jToolsService:
             for n in nodes[:20]  # Limit to first 20
         ]
 
-        return {
+        # Get graph statistics
+        type_counts: Dict[str, int] = {}
+        for node in nodes:
+            et = node.entity_type
+            type_counts[et] = type_counts.get(et, 0) + 1
+
+        # Build context with expected fields for report agent
+        context = {
             "graph_id": graph_id,
-            "simulation_id": simulation_id,
+            "simulation_id": simulation_id or "",
+            "simulation_requirement": simulation_requirement or "",
             "node_count": len(nodes),
+            "total_entities": len(nodes),
+            "total_nodes": len(nodes),
+            "total_edges": 0,  # Edge count not implemented yet
+            "entity_types": list(type_counts.keys()),
+            "graph_statistics": {
+                "total_nodes": len(nodes),
+                "total_edges": 0,
+                "entity_types": list(type_counts.keys()),
+                "entity_type_counts": type_counts
+            },
+            "related_facts": [
+                {
+                    "entity": n.name,
+                    "type": n.entity_type,
+                    "description": n.description
+                }
+                for n in nodes[:10]
+            ],
             "summary": f"Graph contains {len(nodes)} entities: " + ", ".join(node_summaries)
         }
+
+        return context
 
 
 # Alias for backward compatibility

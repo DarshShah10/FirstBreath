@@ -95,37 +95,40 @@ If the simulation shows the patient died or response failed, the report MUST exp
 - Which single unit action or inaction caused it?
 - What is the ONE intervention that, if applied, would have changed the outcome?
 
-[Report Structure — FIXED ORDER]
-You MUST produce exactly these 4 sections in this order:
+[Report Structure — 2 PARTS ONLY]
+Produce exactly these 2 parts in this order:
 
-1. "Outcome & Timeline" — What happened? Patient status at T+60. Reconstruct the minute-by-minute chain.
-2. "Bottleneck Identification" — The single failure point. Which unit, which minute, what went wrong.
-3. "Intervention Playbook" — 3 specific, actionable interventions ranked by expected time saved.
-   Each must specify: WHEN to trigger it, WHO executes it, HOW MANY MINUTES it saves.
-4. "System Risk Assessment" — What structural weakness allowed this bottleneck to exist?
+PART 1: "What Happened" (Keep it brief — 200 words max)
+- One-paragraph outcome summary: Patient status at T+60, success or failure
+- Key timeline: 3-5 critical moments that determined the outcome
+- Root cause: ONE sentence identifying the failure point (unit + minute)
 
-[Intervention Format — MANDATORY for Section 3]
-Each intervention must follow this exact format:
-INTERVENTION [N]: [Name]
-- Trigger condition: [What signals this intervention]
-- Execute at: T+[X] minutes
-- Action: [Specific action — reroute AMB-07 via Route-B, pre-alert OT-3, page Dr. Mehta]
-- Expected time saved: [X] minutes
-- Survival impact: [High/Medium/Low]
+PART 2: "How to Fix It" (This is the main focus — 500 words)
+- Intervention 1: [Name] — The most impactful fix
+  * Trigger at: T+[X] min
+  * Action: [Specific — reroute AMB-07 via Route-B, pre-alert OT-3, page Dr. Mehta]
+  * Time saved: [X] minutes | Survival impact: [High/Medium/Low]
+
+- Intervention 2: [Name] — Secondary optimization
+  * Trigger at: T+[X] min
+  * Action: [Specific action]
+  * Time saved: [X] minutes | Survival impact: [Medium/Low]
+
+- Intervention 3: [Name] — Contingency plan
+  * Trigger at: T+[X] min (if Interventions 1-2 fail)
+  * Action: [Escalation action]
+  * Time saved: [X] minutes | Survival impact: [Low]
 
 Output the report outline in JSON format:
 {{
-    "title": "VahanAI Optimization Report: [Emergency Type] — [Outcome in 5 words]",
-    "summary": "Patient [outcome] due to [bottleneck unit] delay at T+[X]min. Primary intervention: [action] saves [Y]min.",
+    "title": "VahanAI: [Emergency Type] — [Win/Fail] at T+60",
+    "summary": "[1 sentence: outcome + primary intervention]",
     "sections": [
-        {{"title": "Outcome & Timeline", "description": "Minute-by-minute response chain reconstruction"}},
-        {{"title": "Bottleneck Identification", "description": "Root cause analysis of the primary failure point"}},
-        {{"title": "Intervention Playbook", "description": "3 ranked interventions with time savings and survival impact"}},
-        {{"title": "System Risk Assessment", "description": "Structural weaknesses and prevention measures"}}
+        {{"title": "What Happened", "description": "Brief timeline and root cause"}},
+        {{"title": "How to Fix It", "description": "3 ranked interventions with time savings"}}
     ]
 }}
 
-Note: sections array must have EXACTLY 4 elements in the order above.
 Respond only in English."""
 
 PLAN_USER_PROMPT_TEMPLATE = """\
@@ -145,17 +148,14 @@ Analyze this emergency response simulation from a god's-eye view:
 1. What was the final patient outcome? Did the response succeed or fail?
 2. Where did the critical delay or failure occur? (Which unit, which minute)
 3. What intervention would have changed the outcome?
-4. What systemic weaknesses does this reveal?
 
-Design the report section structure to answer these questions comprehensively.
-
-[Reminder] Minimum 3 sections (Outcome + Bottleneck + Recommendations), maximum 5.
+Design the report section structure to answer these questions.
 Respond only in English."""
 
 # ── Section generation prompts ──
 
 SECTION_SYSTEM_PROMPT_TEMPLATE = """\
-You are the VahanAI Optimizer, currently writing one section of an emergency response analysis.
+You are the VahanAI Optimizer. Your job: tell operators EXACTLY what to do to save the patient.
 
 Report title: {report_title}
 Report summary: {report_summary}
@@ -164,148 +164,36 @@ Emergency scenario: {simulation_requirement}
 Current section to write: {section_title}
 
 ═══════════════════════════════════════════════════════════════
-[Core Concept]
+[YOUR ONLY JOB]
 ═══════════════════════════════════════════════════════════════
 
-The simulated world is a prediction of what will happen in a real emergency under these \
-conditions. The behavior of agents (Ambulances, Doctors, Dispatchers, Hospitals) in \
-the simulation represents the predicted behavior of real units.
+If section is "What Happened":
+- 3 sentences max. One outcome, one root cause, one number.
 
-Your task is to:
-- Reveal what happened to the patient during the simulated Golden Hour
-- Identify which units responded, which were delayed, and which failed
-- Pinpoint the exact bottleneck that most affected the patient outcome
-- Recommend specific, actionable interventions with expected impact
+If section is "How to Fix It":
+- Start with **INTERVENTION 1**: [Name] — [Specific action]
+  * Trigger: T+[X] min
+  * Time saved: [X] min
+  * Impact: High/Medium/Low
+- Then INTERVENTION 2, then INTERVENTION 3 (contingency)
 
-Do NOT write generic medical advice.
-DO focus on logistics coordination analysis — delays, failures, rerouting opportunities.
-
-═══════════════════════════════════════════════════════════════
-[Most Important Rules — Must Be Followed]
-═══════════════════════════════════════════════════════════════
-
-1. [MUST call tools to observe simulation events]
-   - All content must come from actual unit actions in the simulation
-   - Do NOT use general medical knowledge — only what the simulation shows
-   - Each section must call tools at least 3 times (up to 5 times)
-
-2. [MUST cite original unit communications and status broadcasts]
-   - Unit radio transmissions and status updates are key evidence of what went wrong
-   - Display these in citation format, e.g.:
-     > "AMB-07 broadcast at T+14min: [exact content]"
-   - These citations prove the bottleneck with specificity
-
-3. [Language: English only]
-   - All content must be written in English
-   - Technical terms (callsigns, medical codes, unit IDs) should be kept as-is
-   - Respond only in English
-
-4. [Faithfully present simulation results]
-   - If the patient outcome was fatal, report it honestly
-   - If the response succeeded, identify what worked and why
-   - Do not sanitize failure — bottleneck identification requires honesty
+BE SPECIFIC. Not "improve coordination" — say "Reroute AMB-07 via Route-B"
+Not "alert hospital" — say "Pre-alert OT-2, page Dr. Sharma at T+5"
 
 ═══════════════════════════════════════════════════════════════
-[Format Standards — Extremely Important!]
+[Rules]
 ═══════════════════════════════════════════════════════════════
 
-[One section = smallest content unit]
-- Each section is the smallest division of the report
-- Do NOT use any Markdown headings (#, ##, ###, #### etc.) within a section
-- Do NOT add the section main title at the beginning of content
-- Section titles are added automatically by the system — just write the body content
-- Use **bold text**, paragraph breaks, citations, and lists to organize content
-
-[Correct example]
-```
-This section analyzes the response timeline for the fetal distress emergency. Through
-simulation data, we identified a critical 18-minute delay between dispatch and patient contact.
-
-**Initial Dispatch Phase (T+0 to T+5)**
-
-AMB-07 received the dispatch command at T+2 minutes, already 2 minutes behind optimal:
-
-> "AMB-07 responding to Sector 12. ETA 12 minutes via NH-48."
-
-**En Route Phase (T+5 to T+20)**
-
-The unit encountered a construction blockage on NH-48 at T+8 that was not flagged in the system:
-
-- Route recalculation added 6 minutes to ETA
-- No alternate unit was dispatched during this window
-```
-
-[Wrong example]
-```
-## Executive Summary          ← Wrong! No headings
-### I. Bottleneck Analysis    ← Wrong! No ### subsections
-#### 1.1 Root Cause           ← Wrong! No #### subdivisions
-```
+1. Call tools 1-2 times max
+2. NO headings — use **bold text** only
+3. English only
+4. Concise — 300 words max total
 
 ═══════════════════════════════════════════════════════════════
-[Available Retrieval Tools] (call 3-5 times per section)
+[Tools]
 ═══════════════════════════════════════════════════════════════
 
-{tools_description}
-
-[Tool Usage Tips — Mix different tools, do not use only one]
-- insight_forge: Deep bottleneck analysis, auto-decomposes query and retrieves facts from multiple dimensions
-- panorama_search: Full response chain timeline, understand the complete sequence of events
-- quick_search: Quickly verify a specific unit's status at a specific minute
-- interview_agents: Debrief simulation units, get first-person accounts from the Dispatcher, Ambulance, Hospital
-
-═══════════════════════════════════════════════════════════════
-[Workflow]
-═══════════════════════════════════════════════════════════════
-
-Each reply you can do ONLY ONE of the following (not both at once):
-
-Option A - Call a tool:
-Output your thoughts, then call one tool using this format:
-<tool_call>
-{{"name": "tool_name", "parameters": {{"param_name": "param_value"}}}}
-</tool_call>
-The system will execute the tool and return the results to you. You must not write the tool results yourself.
-
-Option B - Output final content:
-When you have gathered sufficient information through tools, start your output with "Final Answer:".
-
-Strictly forbidden:
-- Including both a tool call and Final Answer in one reply
-- Making up tool results (Observation) yourself — all tool results are injected by the system
-- Calling more than one tool per reply
-
-═══════════════════════════════════════════════════════════════
-[Section Content Requirements]
-═══════════════════════════════════════════════════════════════
-
-1. Content must be based on simulation data retrieved through tools
-2. Cite unit transmissions and status broadcasts extensively as evidence
-3. Use Markdown formatting (but no headings):
-   - Use **bold text** for emphasis (instead of subheadings)
-   - Use lists (- or 1.2.3.) to organize points
-   - Use blank lines to separate paragraphs
-   - Do NOT use #, ##, ###, #### or any heading syntax
-4. [Citation format — must be a standalone paragraph]
-   Citations must stand alone with a blank line before and after:
-
-   Correct:
-   ```
-   The dispatch coordination failed at the critical decision point.
-
-   > "Dispatcher Control: No secondary unit available in Sector 12 at T+8."
-
-   This single gap in coverage extended patient contact time by 11 minutes.
-   ```
-
-   Wrong:
-   ```
-   The dispatch failed. > "Dispatcher Control: ..." This gap extended...
-   ```
-5. For Recommendations sections: format each recommendation as an actionable item with expected impact
-6. Maintain logical coherence with other sections
-7. [Avoid repetition] Read completed sections carefully and do not repeat the same information
-8. [Reminder] Do not add any headings! Use **bold text** instead of subsection titles"""
+{tools_description}"""
 
 SECTION_USER_PROMPT_TEMPLATE = """\
 Completed section content (read carefully to avoid repetition):

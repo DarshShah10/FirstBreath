@@ -11,10 +11,9 @@ from .simulation_manager import SimulationManager, SimulationState, SimulationSt
 from .simulation_config_generator import (
     SimulationConfigGenerator,
     SimulationParameters,
-    AgentActivityConfig,
-    TimeSimulationConfig,
-    EventConfig,
-    PlatformConfig
+    UnitConfig,
+    CityCondition,
+    DistressSignal,
 )
 from .simulation_runner import (
     SimulationRunner,
@@ -71,10 +70,9 @@ __all__ = [
     'SimulationStatus',
     'SimulationConfigGenerator',
     'SimulationParameters',
-    'AgentActivityConfig',
-    'TimeSimulationConfig',
-    'EventConfig',
-    'PlatformConfig',
+    'UnitConfig',
+    'CityCondition',
+    'DistressSignal',
     'SimulationRunner',
     'SimulationRunState',
     'RunnerStatus',

@@ -1,0 +1,108 @@
+================================================================================
+VAHANAI EMERGENCY DISPATCH TEST CASE
+Festival Rush - Simultaneous Emergencies
+================================================================================
+
+SCENARIO:
+It's Ganesh Chaturthi in Pune. Two simultaneous emergencies:
+1. FirstBreath CTG distress alert from Ward 3 Bed 4
+2. 108 call for road accident on FC Road
+
+CITY CONDITIONS:
+- Traffic: HEAVY (Ganesh procession blocking main roads)
+- Festival: Ganesh Chaturthi - major celebration, roads closed
+- Weather: Clear
+- Blood Bank: Limited O-negative supply
+
+HOSPITAL STATUS (Snapshot):
+- Nearest Ambulance (AMB-01): 2.1km away, responding to prior call
+- Second Ambulance (AMB-02): 3.8km away, available
+- OT-1: Currently in surgery, available at T+45min
+- OT-2: Available
+- Blood Bank: O-negative = 3 units remaining
+- Dr. Sharma (Cardiologist): In consultation, available at T+8min
+- Dr. Patel (Surgeon): Available
+- ICU Beds: 2 available
+
+================================================================================
+DISTRESS SIGNAL 1 (FirstBreath - Type A)
+================================================================================
+Signal Type: A (FirstBreath CTG)
+Severity: 9/10
+Time Window: 20 minutes
+Location: Ward 3 Bed 4, Sassoon Hospital
+Condition: Fetal distress, 28yr female, 36 weeks gestation
+Needs:
+  - Ambulance for transport
+  - OT for emergency C-section
+  - O-negative blood (2 units)
+  - Anesthesiologist
+
+================================================================================
+DISTRESS SIGNAL 2 (108 Call - Type B)
+================================================================================
+Signal Type: B (108 Emergency Call)
+Severity: 7/10
+Time Window: 30 minutes
+Location: FC Road, Pune
+Condition: Road accident, possible internal bleeding
+Needs:
+  - Ambulance (ALS equipped)
+  - Blood (any type)
+  - Trauma surgeon
+
+================================================================================
+CONFLICT DETECTED:
+If AMB-01 dispatched to FC Road accident, no ambulance available for Ward 3.
+If O-negative blood sent to Ward 3, accident patient has no blood backup.
+
+================================================================================
+TEST PROMPT FOR SIMULATION:
+================================================================================
+
+"108 call received: Road accident on FC Road, Pune. Patient male, 35yr, suspected internal
+bleeding. Simultaneously, FirstBreath alerts: fetal distress at Ward 3 Bed 4, Sassoon Hospital.
+Severity 9/10, 20-minute window. Ganesh Chaturthi today - main roads blocked by procession.
+AMB-01 (2.1km) responding to prior call. AMB-02 (3.8km) available. O-negative limited
+(3 units). Dr. Sharma in consultation, available T+8. Run dispatch simulation and identify
+which emergency takes priority and what intervention prevents cascade failure."
+
+================================================================================
+EXPECTED OUTPUT FORMAT:
+================================================================================
+
+{
+  "title": "VahanAI: Dispatch Conflict — Cascade Risk at T+0",
+  "summary": "Two simultaneous emergencies detected. Primary intervention: [action]",
+  "sections": [
+    {
+      "title": "What Happened",
+      "content": "3 sentences: outcome + root cause + critical number"
+    },
+    {
+      "title": "How to Fix It",
+      "content": "3 interventions with trigger time, specific action, time saved"
+    }
+  ]
+}
+
+================================================================================
+INTERVENTION EXAMPLES (What Report Should Output):
+================================================================================
+
+INTERVENTION 1: Festival Routing
+* Trigger: T+0 min
+* Action: Dispatch AMB-02 to Ward 3 (clear path), AMB-01 completes current call then heads to FC Road
+* Time saved: 6 min | Impact: High
+
+INTERVENTION 2: Blood Pre-Order
+* Trigger: T+2 min
+* Action: Pre-order O-negative from Deenanath Hospital (2 units available)
+* Time saved: 10 min | Impact: High
+
+INTERVENTION 3: Dr. Sharma Early Page
+* Trigger: T+5 min
+* Action: Page Dr. Sharma for Ward 3 C-section prep, will be ready when patient arrives
+* Time saved: 8 min | Impact: High
+
+================================================================================

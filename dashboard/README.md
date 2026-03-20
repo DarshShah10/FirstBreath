@@ -70,20 +70,48 @@ dashboard/
 │   │   └── index.ts        # API service functions
 │   ├── components/         # Reusable components
 │   ├── hooks/              # Custom React hooks
+│   │   ├── index.ts           # Hooks exports
+│   │   ├── useSocket.ts       # Socket.IO real-time connection
+│   │   └── useSimulationPolling.ts  # Polling fallback
 │   ├── pages/
 │   │   ├── Dashboard.tsx   # Main dashboard page
-│   │   └── Simulation.tsx # Simulation monitoring page
+│   │   ├── Dashboard.css
+│   │   ├── Simulation.tsx  # Simulation monitoring page
+│   │   └── Simulation.css
 │   ├── styles/
 │   │   └── global.css     # Global styles
 │   ├── types/
 │   │   └── index.ts       # TypeScript type definitions
 │   ├── App.tsx            # Root component
-│   └── main.tsx           # Entry point
+│   ├── main.tsx           # Entry point
+│   └── vite-env.d.ts      # Vite type definitions
 ├── index.html
 ├── package.json
 ├── tsconfig.json
 └── vite.config.ts
 ```
+
+## Real-time Updates
+
+The dashboard supports real-time updates via Socket.IO with automatic polling fallback:
+
+### Socket.IO Hook (`useSocket.ts`)
+Provides real-time WebSocket connection to the backend:
+- Automatic connection/reconnection
+- Event handling for `step`, `case_update`, `agent_state`, `alert`
+- Subscribe/unsubscribe to simulation rooms
+
+### Polling Hook (`useSimulationPolling.ts`)
+Fallback mechanism when WebSocket is unavailable:
+- Configurable polling interval
+- Automatic state updates
+- Results fetching on simulation completion
+
+### Connection Status
+The Simulation page displays real-time connection status:
+- **Live** (green) - Socket.IO connected
+- **Polling** (gray) - Fallback polling mode
+- **Offline** (gray) - No connection
 
 ## Configuration
 

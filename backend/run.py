@@ -45,7 +45,7 @@ def main():
 
     # 启动服务（使用 SocketIO 如果可用）
     if socketio:
-        socketio.run(app, host=host, port=port, debug=debug)
+        socketio.run(app, host=host, port=port, debug=debug, allow_unsafe_werkzeug=True)
     else:
         app.run(host=host, port=port, debug=debug, threaded=True)
 

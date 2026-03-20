@@ -75,6 +75,33 @@
 .header-center {
   display: flex;
   align-items: center;
+  gap: 12px;
+}
+
+.connection-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: var(--radius);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.connection-status.connected {
+  background: var(--green-100);
+  color: var(--green-600);
+}
+
+.connection-status.disconnected {
+  background: var(--gray-200);
+  color: var(--gray-600);
+}
+
+.connection-status svg {
+  width: 14px;
+  height: 14px;
 }
 
 .time-display {

@@ -10,8 +10,11 @@ import {
   Clock,
   Pause,
   Play,
+  RefreshCw,
   Square,
   Users,
+  Wifi,
+  WifiOff,
   Zap
 } from 'lucide-react';
 import {
@@ -24,6 +27,7 @@ import {
   getInterventionAnalysis,
   addCase
 } from '../api';
+import { useSocket, useSimulationPolling } from '../hooks';
 import type { Simulation, SimulationState, SimulationResults, ActionableAnalysis } from '../types';
 import './Simulation.css';
 
@@ -37,6 +41,61 @@ export default function Simulation() {
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'interventions' | 'timeline'>('overview');
+
+  // Socket.IO connection status
+  const [isSocketConnected, setIsSocketConnected] = useState(false);
+
+  // Handle socket events for real-time updates
+  const handleSocketStep = useCallback((data: Record<string, unknown>) => {
+    if (data.simulation_state) {
+      setState(data.simulation_state as SimulationState);
+    }
+  }, []);
+
+  const handleSocketCaseUpdate = useCallback((data: Record<string, unknown>) => {
+    console.log('[Socket] Case update:', data);
+  }, []);
+
+  const handleSocketAgentState = useCallback((data: Record<string, unknown>) => {
+    console.log('[Socket] Agent state:', data);
+  }, []);
+
+  const handleSocketAlert = useCallback((data: Record<string, unknown>) => {
+    console.log('[Socket] Alert:', data);
+  }, []);
+
+  // Socket.IO hook
+  const {
+    isConnected
+  } = useSocket({
+    simulationId: id,
+    autoConnect: true,
+    reconnect: true,
+    onStep: handleSocketStep,
+    onCaseUpdate: handleSocketCaseUpdate,
+    onAgentState: handleSocketAgentState,
+    onAlert: handleSocketAlert,
+  });
+
+  // Polling fallback
+  const {
+    isPolling,
+    pollNow
+  } = useSimulationPolling({
+    simulationId: id,
+    enabled: !isConnected,
+    interval: 2000,
+    onStateUpdate: (newState) => setState(newState),
+    onStatusChange: (status) => {
+      setSimulation(prev => prev ? { ...prev, status: status as Simulation['status'] } : prev);
+    },
+    onResultsUpdate: (newResults) => setResults(newResults),
+  });
+
+  // Track socket connection status
+  useEffect(() => {
+    setIsSocketConnected(isConnected);
+  }, [isConnected]);
 
   // New case form
   const [showAddCase, setShowAddCase] = useState(false);
@@ -96,22 +155,16 @@ export default function Simulation() {
   }, [loadSimulation]);
 
   useEffect(() => {
-    if (simulation?.status === 'running') {
-      const interval = setInterval(async () => {
-        await loadSimulation();
-        if (simulation.status !== 'running') {
-          clearInterval(interval);
-        }
-      }, 2000);
-      return () => clearInterval(interval);
-    }
-  }, [simulation?.status, loadSimulation]);
-
-  useEffect(() => {
     if (results) {
       loadAnalysis();
     }
   }, [results, loadAnalysis]);
+
+  // Manual refresh handler
+  const handleRefresh = async () => {
+    await pollNow();
+    await loadResults();
+  };
 
   const handleRun = async () => {
     if (!id) return;
@@ -228,8 +281,19 @@ export default function Simulation() {
               {state?.sim_time?.toFixed(1) || '0.0'} min
             </span>
           </div>
+          <div className={`connection-status ${isSocketConnected ? 'connected' : 'disconnected'}`}>
+            {isSocketConnected ? <Wifi size={14} /> : <WifiOff size={14} />}
+            <span>{isSocketConnected ? 'Live' : isPolling ? 'Polling' : 'Offline'}</span>
+          </div>
         </div>
         <div className="header-right">
+          <button
+            className="btn-control"
+            onClick={handleRefresh}
+            title="Refresh"
+          >
+            <RefreshCw size={16} />
+          </button>
           <button
             className="btn-control"
             onClick={handleRun}

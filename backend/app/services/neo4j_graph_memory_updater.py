@@ -1,6 +1,6 @@
 """
 Neo4j Graph Memory Updater
-更新 Neo4j 图数据库中的记忆信息
+Updates memory information in Neo4j graph database
 """
 
 from dataclasses import dataclass
@@ -14,7 +14,7 @@ from ..config import Config
 
 @dataclass
 class AgentActivity:
-    """智能体活动"""
+    """Agent activity"""
     agent_id: str
     agent_name: str
     action: str
@@ -25,7 +25,7 @@ class AgentActivity:
 
 class Neo4jGraphMemoryManager:
     """
-    管理 Neo4j 中的记忆
+    Manages memory in Neo4j
     """
 
     def __init__(self, uri: str = None, username: str = None, password: str = None):
@@ -45,18 +45,18 @@ class Neo4jGraphMemoryManager:
 
     def get_context(self, graph_id: str, query: str, limit: int = 10) -> str:
         """
-        获取相关上下文
+        Get relevant context
 
         Args:
-            graph_id: 图谱ID
-            query: 查询关键词
-            limit: 返回结果数量
+            graph_id: Graph ID
+            query: Query keyword
+            limit: Number of results to return
 
         Returns:
-            上下文字符串
+            Context string
         """
         with self.driver.session(database=self.database) as session:
-            # 搜索相关实体
+            # Search for related entities
             query_cypher = """
                 MATCH (n:Entity {graph_id: $graph_id})
                 WHERE toLower(n.name) CONTAINS toLower($query)
@@ -77,7 +77,7 @@ class Neo4jGraphMemoryManager:
             return "\n".join(context_parts) if context_parts else "No relevant context found."
 
     def add_episode(self, graph_id: str, content: str, episode_type: str = "text") -> str:
-        """添加新的记忆片段"""
+        """Add a new memory episode"""
         import uuid
         episode_uuid = str(uuid.uuid4())
 
@@ -103,7 +103,7 @@ class Neo4jGraphMemoryManager:
         return episode_uuid
 
     def link_entity_to_episode(self, graph_id: str, entity_name: str, episode_uuid: str):
-        """将实体关联到记忆片段"""
+        """Link an entity to a memory episode"""
         with self.driver.session(database=self.database) as session:
             session.run(
                 """
@@ -125,7 +125,7 @@ class Neo4jGraphMemoryManager:
 
 class Neo4jGraphMemoryUpdater:
     """
-    更新 Neo4j 图数据库中的记忆
+    Updates memory in Neo4j graph database
     """
 
     def __init__(self, graph_id: str, uri: str = None, username: str = None, password: str = None):
@@ -137,17 +137,17 @@ class Neo4jGraphMemoryUpdater:
 
     def update_memory(self, activities: List[AgentActivity]) -> bool:
         """
-        更新记忆
+        Update memory
 
         Args:
-            activities: 智能体活动列表
+            activities: List of agent activities
 
         Returns:
-            是否成功
+            Whether successful
         """
         try:
             for activity in activities:
-                # 创建记忆片段
+                # Create memory episode
                 content = f"[Round {activity.round_number}] {activity.agent_name}: {activity.action} - {activity.content}"
                 episode_uuid = self.manager.add_episode(
                     self.graph_id,
@@ -155,7 +155,7 @@ class Neo4jGraphMemoryUpdater:
                     episode_type=f"agent_{activity.action}"
                 )
 
-                # 关联到智能体实体
+                # Link to agent entity
                 self.manager.link_entity_to_episode(
                     self.graph_id,
                     activity.agent_name,
@@ -168,11 +168,11 @@ class Neo4jGraphMemoryUpdater:
             return False
 
     def get_simulation_context(self, query: str, limit: int = 10) -> str:
-        """获取模拟上下文"""
+        """Get simulation context"""
         return self.manager.get_context(self.graph_id, query, limit)
 
     def add_entity(self, name: str, entity_type: str, description: str = ""):
-        """添加实体"""
+        """Add entity"""
         with self.manager.driver.session(database=self.manager.database) as session:
             session.run(
                 """
@@ -188,7 +188,7 @@ class Neo4jGraphMemoryUpdater:
             )
 
     def add_relation(self, source: str, target: str, relation_type: str, description: str = ""):
-        """添加关系"""
+        """Add relation"""
         with self.manager.driver.session(database=self.manager.database) as session:
             safe_type = relation_type.replace(" ", "_").replace("-", "_")
             session.run(

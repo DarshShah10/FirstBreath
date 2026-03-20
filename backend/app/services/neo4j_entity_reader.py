@@ -1,6 +1,6 @@
 """
 Neo4j Entity Reader
-从 Neo4j 图数据库读取实体信息
+Reads entity information from Neo4j graph database
 """
 
 from dataclasses import dataclass
@@ -13,7 +13,7 @@ from ..config import Config
 
 @dataclass
 class EntityNode:
-    """实体节点"""
+    """Entity node"""
     uuid: str
     name: str
     entity_type: str
@@ -36,7 +36,7 @@ class EntityNode:
         return self.entity_type
 
     def to_dict(self) -> Dict[str, Any]:
-        """转换为字典"""
+        """Convert to dictionary"""
         return {
             "uuid": self.uuid,
             "name": self.name,
@@ -51,7 +51,7 @@ class EntityNode:
 
 @dataclass
 class FilteredEntities:
-    """过滤后的实体"""
+    """Filtered entities"""
     entities: List[EntityNode]
     query: str = ""
     entity_types: set = None
@@ -77,7 +77,7 @@ class FilteredEntities:
 
 class Neo4jEntityReader:
     """
-    从 Neo4j 图数据库读取实体
+    Reads entities from Neo4j graph database
     """
 
     def __init__(self, uri: str = None, username: str = None, password: str = None):
@@ -92,20 +92,20 @@ class Neo4jEntityReader:
         )
 
     def close(self):
-        """关闭连接"""
+        """Close connection"""
         if self.driver:
             self.driver.close()
 
     def get_all_nodes(self, graph_id: str, entity_type: str = None) -> List[EntityNode]:
         """
-        获取所有实体节点
+        Get all entity nodes
 
         Args:
-            graph_id: 图谱ID
-            entity_type: 实体类型过滤
+            graph_id: Graph ID
+            entity_type: Entity type filter
 
         Returns:
-            实体节点列表
+            List of entity nodes
         """
         with self.driver.session(database=self.database) as session:
             if entity_type:
@@ -139,7 +139,7 @@ class Neo4jEntityReader:
             return nodes
 
     def get_node_by_name(self, graph_id: str, name: str) -> Optional[EntityNode]:
-        """根据名称获取实体"""
+        """Get entity by name"""
         with self.driver.session(database=self.database) as session:
             query = """
                 MATCH (n:Entity {graph_id: $graph_id, name: $name})
@@ -162,7 +162,7 @@ class Neo4jEntityReader:
             return None
 
     def get_node_edges(self, graph_id: str, node_name: str) -> List[Dict]:
-        """获取实体的所有关系"""
+        """Get all relations of an entity"""
         with self.driver.session(database=self.database) as session:
             query = """
                 MATCH (n:Entity {graph_id: $graph_id, name: $node_name})-[r]-(m)
@@ -184,7 +184,7 @@ class Neo4jEntityReader:
             return edges
 
     def search_nodes(self, graph_id: str, keyword: str) -> List[EntityNode]:
-        """搜索实体"""
+        """Search entities"""
         with self.driver.session(database=self.database) as session:
             query = """
                 MATCH (n:Entity {graph_id: $graph_id})
@@ -224,39 +224,39 @@ class Neo4jEntityReader:
         enrich_with_edges: bool = True
     ) -> FilteredEntities:
         """
-        过滤图谱节点，只返回有自定义类型的节点。
+        Filter graph nodes, returning only nodes with custom types.
 
         Args:
-            graph_id: 图谱ID
-            defined_entity_types: 可选的实体类型白名单
-            enrich_with_edges: 是否填充边信息
+            graph_id: Graph ID
+            defined_entity_types: Optional whitelist of entity types
+            enrich_with_edges: Whether to populate edge information
 
         Returns:
-            FilteredEntities 包含匹配的实体和统计信息
+            FilteredEntities containing matching entities and statistics
         """
         import uuid as uuid_module
 
-        # 获取所有节点
+        # Get all nodes
         all_nodes = self.get_all_nodes(graph_id)
         total_count = len(all_nodes)
 
-        # 过滤节点
+        # Filter nodes
         filtered_entities = []
         entity_types_found = set()
 
         for node in all_nodes:
-            # 跳过没有自定义类型的节点
+            # Skip nodes without custom types
             if node.entity_type in ["Entity", "Node", ""]:
                 continue
 
-            # 如果提供了白名单，检查是否匹配
+            # If whitelist provided, check for match
             if defined_entity_types:
                 if node.entity_type not in defined_entity_types:
                     continue
 
             entity_types_found.add(node.entity_type)
 
-            # 如果需要边信息，获取
+            # If edge info needed, get it
             if enrich_with_edges:
                 node.related_edges = self.get_node_edges(graph_id, node.name)
 
@@ -272,8 +272,8 @@ class Neo4jEntityReader:
         graph_id: str,
         entity_uuid: str
     ) -> Optional[EntityNode]:
-        """获取单个实体的完整上下文"""
-        # 通过名称查找
+        """Get complete context for a single entity"""
+        # Find by name
         all_nodes = self.get_all_nodes(graph_id)
         for node in all_nodes:
             if node.uuid == entity_uuid:

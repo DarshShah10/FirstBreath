@@ -11,7 +11,7 @@ from flask import request, jsonify
 from . import graph_bp
 from ..config import Config
 from ..services.ontology_generator import OntologyGenerator
-from ..services.graph_builder import GraphBuilderService
+from ..services.neo4j_graph_service import Neo4jGraphService
 from ..services.text_processor import TextProcessor
 from ..utils.file_parser import FileParser
 from ..utils.logger import get_logger
@@ -284,8 +284,8 @@ def build_graph():
         
         # 检查配置
         errors = []
-        if not Config.ZEP_API_KEY:
-            errors.append("ZEP_API_KEY未配置")
+        if not Config.NEO4J_URI or not Config.NEO4J_USERNAME or not Config.NEO4J_PASSWORD:
+            errors.append("Neo4j配置不完整")
         if errors:
             logger.error(f"配置错误: {errors}")
             return jsonify({
@@ -382,7 +382,7 @@ def build_graph():
                 )
                 
                 # 创建图谱构建服务
-                builder = GraphBuilderService(api_key=Config.ZEP_API_KEY)
+                builder = Neo4jGraphService()
                 
                 # 分块
                 task_manager.update_task(
@@ -433,8 +433,9 @@ def build_graph():
                 )
                 
                 episode_uuids = builder.add_text_batches(
-                    graph_id, 
+                    graph_id,
                     chunks,
+                    ontology=ontology,
                     batch_size=3,
                     progress_callback=add_progress_callback
                 )
@@ -567,20 +568,21 @@ def get_graph_data(graph_id: str):
     获取图谱数据（节点和边）
     """
     try:
-        if not Config.ZEP_API_KEY:
+        if not Config.NEO4J_URI:
             return jsonify({
                 "success": False,
-                "error": "ZEP_API_KEY未配置"
+                "error": "Neo4j配置不完整"
             }), 500
-        
-        builder = GraphBuilderService(api_key=Config.ZEP_API_KEY)
+
+        builder = Neo4jGraphService()
         graph_data = builder.get_graph_data(graph_id)
-        
+        builder.close()
+
         return jsonify({
             "success": True,
             "data": graph_data
         })
-        
+
     except Exception as e:
         return jsonify({
             "success": False,
@@ -592,23 +594,24 @@ def get_graph_data(graph_id: str):
 @graph_bp.route('/delete/<graph_id>', methods=['DELETE'])
 def delete_graph(graph_id: str):
     """
-    删除Zep图谱
+    删除Neo4j图谱
     """
     try:
-        if not Config.ZEP_API_KEY:
+        if not Config.NEO4J_URI:
             return jsonify({
                 "success": False,
-                "error": "ZEP_API_KEY未配置"
+                "error": "Neo4j配置不完整"
             }), 500
-        
-        builder = GraphBuilderService(api_key=Config.ZEP_API_KEY)
+
+        builder = Neo4jGraphService()
         builder.delete_graph(graph_id)
-        
+        builder.close()
+
         return jsonify({
             "success": True,
             "message": f"图谱已删除: {graph_id}"
         })
-        
+
     except Exception as e:
         return jsonify({
             "success": False,

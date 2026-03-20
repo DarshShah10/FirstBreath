@@ -8,7 +8,7 @@ import json
 import re
 from typing import Any, Dict, Optional
 
-from ..zep_entity_reader import EntityNode
+from ..neo4j_entity_reader import EntityNode
 
 
 # ---------------------------------------------------------------------------

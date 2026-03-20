@@ -1,8 +1,8 @@
 """
-OasisProfileGenerator — converts Zep graph entities into OASIS Agent Profiles.
+OasisProfileGenerator — converts Neo4j graph entities into OASIS Agent Profiles.
 
-Improvements over the original implementation:
-1. Calls Zep retrieval to enrich entity context before generation.
+Improved version:
+1. Calls Neo4j retrieval to enrich entity context before generation.
 2. Produces highly detailed personas via LLM prompts.
 3. Distinguishes individual entities from abstract group entities.
 """
@@ -14,12 +14,11 @@ from threading import Lock
 from typing import Any, Callable, Dict, List, Optional
 import concurrent.futures
 
-from openai import OpenAI
-from zep_cloud.client import Zep
+import httpx
 
 from ...config import Config
 from ...utils.logger import get_logger
-from ..zep_entity_reader import EntityNode
+from ..neo4j_entity_reader import EntityNode
 from .constants import UNIT_TYPES, BASE_LOCATIONS
 from .models import OasisAgentProfile
 from .prompts import build_group_persona_prompt, build_individual_persona_prompt, get_system_prompt
@@ -41,10 +40,10 @@ class OasisProfileGenerator:
     """
     OASIS Profile Generator.
 
-    Converts Zep graph entities into Agent Profiles required for OASIS simulation.
+    Converts Neo4j graph entities into Agent Profiles required for OASIS simulation.
 
     Key features:
-    1. Calls Zep graph retrieval to obtain richer context.
+    1. Calls Neo4j graph retrieval to obtain richer context.
     2. Generates highly detailed operational dossiers (callsign, specialty, location, equipment, availability).
     3. Distinguishes individual response units from facility/institution entities.
     """
@@ -54,7 +53,6 @@ class OasisProfileGenerator:
         api_key: Optional[str] = None,
         base_url: Optional[str] = None,
         model_name: Optional[str] = None,
-        zep_api_key: Optional[str] = None,
         graph_id: Optional[str] = None,
     ):
         self.api_key = api_key or Config.LLM_API_KEY
@@ -64,18 +62,7 @@ class OasisProfileGenerator:
         if not self.api_key:
             raise ValueError("LLM_API_KEY is not configured")
 
-        self.client = OpenAI(api_key=self.api_key, base_url=self.base_url)
-
-        # Zep client for context enrichment
-        self.zep_api_key = zep_api_key or Config.ZEP_API_KEY
-        self.zep_client: Optional[Zep] = None
         self.graph_id = graph_id
-
-        if self.zep_api_key:
-            try:
-                self.zep_client = Zep(api_key=self.zep_api_key)
-            except Exception as e:
-                logger.warning(f"Zep client initialization failed: {e}")
 
     # ------------------------------------------------------------------
     # Public API
@@ -92,21 +79,21 @@ class OasisProfileGenerator:
         use_llm: bool = True,
     ) -> OasisAgentProfile:
         """
-        Generate an OASIS Agent Profile from a Zep entity.
+        Generate an OASIS Agent Profile from a Neo4j entity.
 
         Args:
-            entity: Zep entity node.
+            entity: Neo4j entity node.
             user_id: User ID for OASIS.
             use_llm: Whether to use the LLM to generate a detailed persona.
 
         Returns:
             OasisAgentProfile instance.
         """
-        entity_type = entity.get_entity_type() or "Entity"
+        entity_type = entity.entity_type or "Entity"
         name = entity.name
         user_name = generate_username(name)
 
-        context = build_entity_context(entity, self.zep_client, self.graph_id)
+        context = build_entity_context(entity, None, self.graph_id)
 
         if use_llm:
             profile_data = self._generate_profile_with_llm(
@@ -208,7 +195,7 @@ class OasisProfileGenerator:
 
         def generate_single_profile(idx: int, entity: EntityNode):
             """Worker function for a single profile generation task."""
-            entity_type = entity.get_entity_type() or "Entity"
+            entity_type = entity.entity_type or "Entity"
 
             try:
                 profile = self.generate_profile_from_entity(
@@ -366,24 +353,41 @@ class OasisProfileGenerator:
 
         for attempt in range(max_attempts):
             try:
-                response = self.client.chat.completions.create(
-                    model=self.model_name,
-                    messages=[
-                        {"role": "system", "content": get_system_prompt(is_individual)},
-                        {"role": "user", "content": prompt},
+                # Use httpx for Codemax API (Anthropic format)
+                headers = {
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json",
+                    "anthropic-version": "2023-06-01",
+                }
+
+                body = {
+                    "model": self.model_name,
+                    "max_tokens": 4096,
+                    "messages": [
+                        {"role": "user", "content": get_system_prompt(is_individual) + "\n\n" + prompt}
                     ],
-                    response_format={"type": "json_object"},
-                    temperature=0.7 - (attempt * 0.1),  # reduce temperature on each retry
-                )
+                    "temperature": 0.7 - (attempt * 0.1),
+                }
 
-                content = response.choices[0].message.content
-                finish_reason = response.choices[0].finish_reason
-
-                if finish_reason == 'length':
-                    logger.warning(
-                        f"LLM output was truncated (attempt {attempt + 1}), attempting repair..."
+                with httpx.Client(timeout=120.0) as client:
+                    response = client.post(
+                        f"{self.base_url}/messages",
+                        headers=headers,
+                        json=body
                     )
-                    content = fix_truncated_json(content)
+
+                if response.status_code != 200:
+                    raise RuntimeError(f"API error {response.status_code}: {response.text}")
+
+                data = response.json()
+                content = ""
+                for block in data.get("content", []):
+                    if block.get("type") == "text":
+                        content = block.get("text", "")
+                        break
+
+                if not content:
+                    raise ValueError("Empty response from LLM")
 
                 try:
                     result = json.loads(content)

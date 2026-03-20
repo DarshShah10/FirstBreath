@@ -17,11 +17,11 @@ import math
 import time
 from typing import Any, Callable, Dict, List, Optional
 
-from openai import OpenAI
+import httpx
 
 from ...config import Config
 from ...utils.logger import get_logger
-from ..zep_entity_reader import EntityNode
+from ..neo4j_entity_reader import EntityNode
 from .models import (
     AgentActivityConfig,
     EventConfig,
@@ -80,7 +80,7 @@ class SimulationConfigGenerator:
         if not self.api_key:
             raise ValueError("LLM_API_KEY is not configured")
 
-        self.client = OpenAI(api_key=self.api_key, base_url=self.base_url)
+        self.client = None  # Will use httpx instead
 
     # ------------------------------------------------------------------
     # Public API
@@ -293,22 +293,41 @@ class SimulationConfigGenerator:
 
         for attempt in range(max_attempts):
             try:
-                response = self.client.chat.completions.create(
-                    model=self.model_name,
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": prompt},
+                # Use httpx for Codemax API (Anthropic format)
+                headers = {
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json",
+                    "anthropic-version": "2023-06-01",
+                }
+
+                body = {
+                    "model": self.model_name,
+                    "max_tokens": 4096,
+                    "messages": [
+                        {"role": "user", "content": f"{system_prompt}\n\n{prompt}"}
                     ],
-                    response_format={"type": "json_object"},
-                    temperature=0.7 - (attempt * 0.1),  # reduce temperature on each retry
-                )
+                    "temperature": 0.7 - (attempt * 0.1),
+                }
 
-                content = response.choices[0].message.content
-                finish_reason = response.choices[0].finish_reason
+                with httpx.Client(timeout=120.0) as client:
+                    response = client.post(
+                        f"{self.base_url}/messages",
+                        headers=headers,
+                        json=body
+                    )
 
-                if finish_reason == 'length':
-                    logger.warning(f"LLM output was truncated (attempt {attempt + 1})")
-                    content = fix_truncated_json(content)
+                if response.status_code != 200:
+                    raise RuntimeError(f"API error {response.status_code}: {response.text}")
+
+                data = response.json()
+                content = ""
+                for block in data.get("content", []):
+                    if block.get("type") == "text":
+                        content = block.get("text", "")
+                        break
+
+                if not content:
+                    raise ValueError("Empty response from LLM")
 
                 try:
                     return json.loads(content)

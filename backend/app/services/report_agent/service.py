@@ -15,12 +15,8 @@ from datetime import datetime
 from ...config import Config
 from ...utils.llm_client import LLMClient
 from ...utils.logger import get_logger
-from ..zep_tools import (
-    ZepToolsService,
-    SearchResult,
-    InsightForgeResult,
-    PanoramaResult,
-    InterviewResult
+from ..neo4j_tools_service import (
+    Neo4jToolsService as ZepToolsService,
 )
 from .models import Report, ReportSection, ReportOutline, ReportStatus
 from .loggers import ReportLogger, ReportConsoleLogger

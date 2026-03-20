@@ -952,18 +952,24 @@ def search_graph_tool():
                 "error": "请提供 graph_id 和 query"
             }), 400
         
-        from ..services.zep_tools import ZepToolsService
-        
-        tools = ZepToolsService()
+        from ..services.neo4j_tools_service import Neo4jToolsService
+
+        tools = Neo4jToolsService()
         result = tools.search_graph(
             graph_id=graph_id,
             query=query,
             limit=limit
         )
-        
+
         return jsonify({
             "success": True,
-            "data": result.to_dict()
+            "data": {
+                "query": result.query,
+                "nodes": result.nodes,
+                "edges": result.edges,
+                "total_nodes": result.total_nodes,
+                "total_edges": result.total_edges
+            }
         })
         
     except Exception as e:
@@ -996,9 +1002,9 @@ def get_graph_statistics_tool():
                 "error": "请提供 graph_id"
             }), 400
         
-        from ..services.zep_tools import ZepToolsService
-        
-        tools = ZepToolsService()
+        from ..services.neo4j_tools_service import Neo4jToolsService
+
+        tools = Neo4jToolsService()
         result = tools.get_graph_statistics(graph_id)
         
         return jsonify({

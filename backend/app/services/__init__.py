@@ -3,13 +3,13 @@ Business service layer.
 """
 
 from .ontology_generator import OntologyGenerator
-from .graph_builder import GraphBuilderService
+from .neo4j_graph_service import Neo4jGraphService as GraphBuilderService
 from .text_processor import TextProcessor
-from .zep_entity_reader import ZepEntityReader, EntityNode, FilteredEntities
+from .neo4j_entity_reader import Neo4jEntityReader, EntityNode, FilteredEntities
 from .oasis_profile_generator import OasisProfileGenerator, OasisAgentProfile
 from .simulation_manager import SimulationManager, SimulationState, SimulationStatus
 from .simulation_config_generator import (
-    SimulationConfigGenerator, 
+    SimulationConfigGenerator,
     SimulationParameters,
     AgentActivityConfig,
     TimeSimulationConfig,
@@ -23,9 +23,9 @@ from .simulation_runner import (
     AgentAction,
     RoundSummary
 )
-from .zep_graph_memory_updater import (
-    ZepGraphMemoryUpdater,
-    ZepGraphMemoryManager,
+from .neo4j_graph_memory_updater import (
+    Neo4jGraphMemoryUpdater,
+    Neo4jGraphMemoryManager,
     AgentActivity
 )
 from .simulation_ipc import (
@@ -46,11 +46,21 @@ from .report_agent import (
     ReportLogger,
     ReportConsoleLogger,
 )
+from .neo4j_tools_service import (
+    Neo4jToolsService,
+)
+
+# Aliases for backward compatibility
+ZepEntityReader = Neo4jEntityReader
+ZepGraphMemoryUpdater = Neo4jGraphMemoryUpdater
+ZepGraphMemoryManager = Neo4jGraphMemoryManager
+ZepToolsService = Neo4jToolsService
 
 __all__ = [
-    'OntologyGenerator', 
-    'GraphBuilderService', 
+    'OntologyGenerator',
+    'GraphBuilderService',
     'TextProcessor',
+    'Neo4jEntityReader',
     'ZepEntityReader',
     'EntityNode',
     'FilteredEntities',
@@ -70,7 +80,9 @@ __all__ = [
     'RunnerStatus',
     'AgentAction',
     'RoundSummary',
+    'Neo4jGraphMemoryUpdater',
     'ZepGraphMemoryUpdater',
+    'Neo4jGraphMemoryManager',
     'ZepGraphMemoryManager',
     'AgentActivity',
     'SimulationIPCClient',
@@ -87,5 +99,6 @@ __all__ = [
     'ReportStatus',
     'ReportLogger',
     'ReportConsoleLogger',
+    'Neo4jToolsService',
+    'ZepToolsService',
 ]
-

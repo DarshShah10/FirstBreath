@@ -1,7 +1,7 @@
 """
 Utility functions for the OASIS Agent Profile generator.
 
-Covers: username generation, entity type detection, Zep graph search,
+Covers: username generation, entity type detection, Neo4j graph search,
 entity context building, JSON repair, rule-based profile generation,
 console output, and gender normalization.
 """
@@ -14,7 +14,7 @@ import time
 from typing import Any, Dict, List, Optional
 
 from ...utils.logger import get_logger
-from ..zep_entity_reader import EntityNode
+from ..neo4j_entity_reader import EntityNode
 from .constants import (
     BASE_LOCATIONS,
     GROUP_ENTITY_TYPES,

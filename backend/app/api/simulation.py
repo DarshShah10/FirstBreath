@@ -9,7 +9,7 @@ from flask import request, jsonify, send_file
 
 from . import simulation_bp
 from ..config import Config
-from ..services.zep_entity_reader import ZepEntityReader
+from ..services.neo4j_entity_reader import Neo4jEntityReader, FilteredEntities
 from ..services.oasis_profile_generator import OasisProfileGenerator
 from ..services.simulation_manager import SimulationManager, SimulationStatus
 from ..services.simulation_runner import SimulationRunner, RunnerStatus
@@ -56,28 +56,63 @@ def get_graph_entities(graph_id: str):
         enrich: 是否获取相关边信息（默认true）
     """
     try:
-        if not Config.ZEP_API_KEY:
+        if not Config.NEO4J_URI:
             return jsonify({
                 "success": False,
-                "error": "ZEP_API_KEY未配置"
+                "error": "NEO4J_URI未配置"
             }), 500
-        
+
         entity_types_str = request.args.get('entity_types', '')
         entity_types = [t.strip() for t in entity_types_str.split(',') if t.strip()] if entity_types_str else None
         enrich = request.args.get('enrich', 'true').lower() == 'true'
-        
+
         logger.info(f"获取图谱实体: graph_id={graph_id}, entity_types={entity_types}, enrich={enrich}")
-        
-        reader = ZepEntityReader()
-        result = reader.filter_defined_entities(
-            graph_id=graph_id,
-            defined_entity_types=entity_types,
-            enrich_with_edges=enrich
-        )
-        
+
+        reader = Neo4jEntityReader()
+
+        # Get all nodes (optionally filtered by entity type)
+        if entity_types:
+            all_entities = []
+            all_types = set()
+            for et in entity_types:
+                filtered = reader.get_entities_by_type(graph_id, et)
+                all_entities.extend(filtered.entities)
+                all_types.add(et)
+            result = FilteredEntities(
+                entities=all_entities,
+                query=f"type:{','.join(entity_types)}"
+            )
+        else:
+            all_nodes = reader.get_all_nodes(graph_id)
+            # Convert to list of EntityNode-like objects with entity_type
+            entities = []
+            entity_type_set = set()
+            for node in all_nodes:
+                from ..services.neo4j_entity_reader import EntityNode
+                entity_type = node.entity_type if hasattr(node, 'entity_type') else 'Entity'
+                entity_node = EntityNode(
+                    uuid=node.uuid,
+                    name=node.name,
+                    entity_type=entity_type,
+                    description=node.description if hasattr(node, 'description') else '',
+                    summary=node.summary if hasattr(node, 'summary') else '',
+                    attributes=node.attributes if hasattr(node, 'attributes') else {}
+                )
+                entities.append(entity_node)
+                entity_type_set.add(entity_type)
+            result = FilteredEntities(
+                entities=entities,
+                query=""
+            )
+
         return jsonify({
             "success": True,
-            "data": result.to_dict()
+            "data": {
+                "entities": [e.to_dict() if hasattr(e, 'to_dict') else {"uuid": e.uuid, "name": e.name, "entity_type": e.entity_type, "description": getattr(e, 'description', ''), "summary": getattr(e, 'summary', ''), "attributes": getattr(e, 'attributes', {})} for e in result.entities],
+                "entity_types": list(set(e.entity_type for e in result.entities)),
+                "total_count": len(result.entities),
+                "filtered_count": len(result.entities)
+            }
         })
         
     except Exception as e:
@@ -93,24 +128,37 @@ def get_graph_entities(graph_id: str):
 def get_entity_detail(graph_id: str, entity_uuid: str):
     """获取单个实体的详细信息"""
     try:
-        if not Config.ZEP_API_KEY:
+        if not Config.NEO4J_URI:
             return jsonify({
                 "success": False,
-                "error": "ZEP_API_KEY未配置"
+                "error": "NEO4J_URI未配置"
             }), 500
-        
-        reader = ZepEntityReader()
-        entity = reader.get_entity_with_context(graph_id, entity_uuid)
-        
+
+        reader = Neo4jEntityReader()
+        # Find entity by UUID - we need to search for it
+        all_nodes = reader.get_all_nodes(graph_id)
+        entity = None
+        for node in all_nodes:
+            if node.uuid == entity_uuid:
+                entity = node
+                break
+
         if not entity:
             return jsonify({
                 "success": False,
                 "error": f"实体不存在: {entity_uuid}"
             }), 404
-        
+
         return jsonify({
             "success": True,
-            "data": entity.to_dict()
+            "data": {
+                "uuid": entity.uuid,
+                "name": entity.name,
+                "entity_type": entity.entity_type,
+                "description": entity.description,
+                "summary": entity.summary,
+                "attributes": entity.attributes
+            }
         })
         
     except Exception as e:
@@ -126,27 +174,33 @@ def get_entity_detail(graph_id: str, entity_uuid: str):
 def get_entities_by_type(graph_id: str, entity_type: str):
     """获取指定类型的所有实体"""
     try:
-        if not Config.ZEP_API_KEY:
+        if not Config.NEO4J_URI:
             return jsonify({
                 "success": False,
-                "error": "ZEP_API_KEY未配置"
+                "error": "NEO4J_URI未配置"
             }), 500
-        
+
         enrich = request.args.get('enrich', 'true').lower() == 'true'
-        
-        reader = ZepEntityReader()
-        entities = reader.get_entities_by_type(
-            graph_id=graph_id,
-            entity_type=entity_type,
-            enrich_with_edges=enrich
-        )
-        
+
+        reader = Neo4jEntityReader()
+        filtered = reader.get_entities_by_type(graph_id, entity_type)
+        entities = filtered.entities
+
         return jsonify({
             "success": True,
             "data": {
                 "entity_type": entity_type,
                 "count": len(entities),
-                "entities": [e.to_dict() for e in entities]
+                "entities": [
+                    {
+                        "uuid": e.uuid,
+                        "name": e.name,
+                        "entity_type": e.entity_type,
+                        "description": e.description,
+                        "summary": e.summary,
+                        "attributes": e.attributes
+                    } for e in entities
+                ]
             }
         })
         
@@ -471,17 +525,25 @@ def prepare_simulation():
         # 这样前端在调用prepare后立即就能获取到预期Agent总数
         try:
             logger.info(f"同步获取实体数量: graph_id={state.graph_id}")
-            reader = ZepEntityReader()
+            reader = Neo4jEntityReader()
             # 快速读取实体（不需要边信息，只统计数量）
-            filtered_preview = reader.filter_defined_entities(
-                graph_id=state.graph_id,
-                defined_entity_types=entity_types_list,
-                enrich_with_edges=False  # 不获取边信息，加快速度
-            )
+            if entity_types_list:
+                all_entities = []
+                entity_type_set = set()
+                for et in entity_types_list:
+                    filtered = reader.get_entities_by_type(state.graph_id, et)
+                    all_entities.extend(filtered.entities)
+                    entity_type_set.add(et)
+                filtered_count = len(all_entities)
+                entity_types_found = entity_type_set
+            else:
+                all_nodes = reader.get_all_nodes(state.graph_id)
+                filtered_count = len(all_nodes)
+                entity_types_found = set(n.entity_type for n in all_nodes)
             # 保存实体数量到状态（供前端立即获取）
-            state.entities_count = filtered_preview.filtered_count
-            state.entity_types = list(filtered_preview.entity_types)
-            logger.info(f"预期实体数量: {filtered_preview.filtered_count}, 类型: {filtered_preview.entity_types}")
+            state.entities_count = filtered_count
+            state.entity_types = list(entity_types_found)
+            logger.info(f"预期实体数量: {filtered_count}, 类型: {entity_types_found}")
         except Exception as e:
             logger.warning(f"同步获取实体数量失败（将在后台任务中重试）: {e}")
             # 失败不影响后续流程，后台任务会重新获取
@@ -1396,22 +1458,28 @@ def generate_profiles():
         use_llm = data.get('use_llm', True)
         platform = data.get('platform', 'reddit')
         
-        reader = ZepEntityReader()
-        filtered = reader.filter_defined_entities(
-            graph_id=graph_id,
-            defined_entity_types=entity_types,
-            enrich_with_edges=True
-        )
+        reader = Neo4jEntityReader()
+        if entity_types:
+            all_entities = []
+            for et in entity_types:
+                filtered = reader.get_entities_by_type(graph_id, et)
+                all_entities.extend(filtered.entities)
+            filtered_entities = all_entities
+            entity_types_set = set(entity_types)
+        else:
+            all_nodes = reader.get_all_nodes(graph_id)
+            filtered_entities = all_nodes
+            entity_types_set = set(n.entity_type for n in all_nodes)
         
-        if filtered.filtered_count == 0:
+        if len(filtered_entities) == 0:
             return jsonify({
                 "success": False,
                 "error": "没有找到符合条件的实体"
             }), 400
-        
+
         generator = OasisProfileGenerator()
         profiles = generator.generate_profiles_from_entities(
-            entities=filtered.entities,
+            entities=filtered_entities,
             use_llm=use_llm
         )
         
@@ -1426,7 +1494,7 @@ def generate_profiles():
             "success": True,
             "data": {
                 "platform": platform,
-                "entity_types": list(filtered.entity_types),
+                "entity_types": list(entity_types_set),
                 "count": len(profiles_data),
                 "profiles": profiles_data
             }

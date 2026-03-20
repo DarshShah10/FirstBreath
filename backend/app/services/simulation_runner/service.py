@@ -23,7 +23,7 @@ _SAFE_ID_RE = re.compile(r'^[a-zA-Z0-9_-]{1,128}$')
 
 from ...config import Config
 from ...utils.logger import get_logger
-from ..zep_graph_memory_updater import ZepGraphMemoryManager
+from ..neo4j_graph_memory_updater import Neo4jGraphMemoryManager as ZepGraphMemoryManager
 from ..simulation_ipc import SimulationIPCClient, CommandType, IPCResponse
 from .models import RunnerStatus, AgentAction, RoundSummary, SimulationRunState
 

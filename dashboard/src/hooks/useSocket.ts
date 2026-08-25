@@ -28,7 +28,13 @@ export interface UseSocketReturn {
   emitPing: () => void;
 }
 
-const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+// Backend host for Socket.IO (websockets can't traverse Vercel rewrites,
+// so we connect cross-origin; backend allows all origins).
+// REST calls use same-origin /api which Vercel proxies to the backend.
+const SOCKET_URL =
+  import.meta.env.VITE_SOCKET_URL ||
+  import.meta.env.VITE_API_URL?.replace(/\/api\/v1$/, '') ||
+  'https://firstbreath-backend.onrender.com';
 
 export function useSocket(options: UseSocketOptions = {}): UseSocketReturn {
   const {

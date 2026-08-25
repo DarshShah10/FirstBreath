@@ -39,8 +39,8 @@ def create_app(config_class=Config):
         logger.info("MiroFish Backend Starting...")
         logger.info("=" * 50)
 
-    # 启用CORS
-    CORS(app, resources={r"/api/*": {"origins": "*"}})
+    # Enable CORS for configured frontend origins
+    CORS(app, resources={r"/api/*": {"origins": Config.ALLOWED_ORIGINS}})
 
     # 请求日志中间件
     @app.before_request

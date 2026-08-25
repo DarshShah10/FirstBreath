@@ -7,7 +7,6 @@ import os
 from dotenv import load_dotenv
 
 # Load .env file from project root
-# Path: MiroFish/.env (relative to backend/app/config.py)
 project_root_env = os.path.join(os.path.dirname(__file__), '../../.env')
 
 if os.path.exists(project_root_env):
@@ -19,63 +18,43 @@ else:
 
 class Config:
     """Flask configuration class"""
-    
-    # Flask configuration
-    SECRET_KEY = os.environ.get('SECRET_KEY', 'mirofish-secret-key')
-    DEBUG = os.environ.get('FLASK_DEBUG', 'True').lower() == 'true'
-    
-    # JSON configuration - disable ASCII escaping, display Chinese directly (instead of \uXXXX format)
-    JSON_AS_ASCII = False
-    
-    # LLM configuration (unified OpenAI format)
-    LLM_API_KEY = os.environ.get('LLM_API_KEY')
-    LLM_BASE_URL = os.environ.get('LLM_BASE_URL', 'https://api.openai.com/v1')
-    LLM_MODEL_NAME = os.environ.get('LLM_MODEL_NAME', 'gpt-4o-mini')
-    
-    # Zep configuration (deprecated, using Neo4j)
-    ZEP_API_KEY = os.environ.get('ZEP_API_KEY')
 
-    # Neo4j Aura configuration
-    NEO4J_URI = os.environ.get('NEO4J_URI', 'neo4j+s://localhost:7687')
-    NEO4J_USERNAME = os.environ.get('NEO4J_USERNAME', 'neo4j')
-    NEO4J_PASSWORD = os.environ.get('NEO4J_PASSWORD', '')
-    NEO4J_DATABASE = os.environ.get('NEO4J_DATABASE', 'neo4j')
-    
+    # Flask configuration
+    SECRET_KEY = os.environ.get('SECRET_KEY', 'firstbreath-dev-secret-key')
+    DEBUG = os.environ.get('FLASK_DEBUG', 'True').lower() == 'true'
+
+    JSON_AS_ASCII = False
+
+    # LLM configuration (OpenRouter / any OpenAI-compatible endpoint)
+    LLM_API_KEY = os.environ.get('LLM_API_KEY') or os.environ.get('OPENROUTER_API_KEY')
+    LLM_BASE_URL = os.environ.get('LLM_BASE_URL', 'https://openrouter.ai/api/v1')
+    LLM_MODEL_NAME = os.environ.get('LLM_MODEL_NAME', 'stealth/ox-alpha')
+    LLM_FALLBACK_MODEL = os.environ.get('LLM_FALLBACK_MODEL', '')
+
+    # Supabase (Postgres) configuration
+    SUPABASE_URL = os.environ.get('SUPABASE_URL', '')
+    SUPABASE_SECRET_KEY = os.environ.get('SUPABASE_SECRET_KEY', '')
+    DATABASE_URL = os.environ.get('DATABASE_URL', '')  # direct Postgres connection string
+
     # File upload configuration
     MAX_CONTENT_LENGTH = 50 * 1024 * 1024  # 50MB
     UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), '../uploads')
     ALLOWED_EXTENSIONS = {'pdf', 'md', 'txt', 'markdown'}
-    
-    # Text processing configuration
-    DEFAULT_CHUNK_SIZE = 500  # Default chunk size
-    DEFAULT_CHUNK_OVERLAP = 50  # Default overlap size
-    
-    # OASIS simulation configuration
-    OASIS_DEFAULT_MAX_ROUNDS = int(os.environ.get('OASIS_DEFAULT_MAX_ROUNDS', '10'))
-    OASIS_SIMULATION_DATA_DIR = os.path.join(os.path.dirname(__file__), '../uploads/simulations')
-    
-    # OASIS platform available actions configuration
-    OASIS_TWITTER_ACTIONS = [
-        'CREATE_POST', 'LIKE_POST', 'REPOST', 'FOLLOW', 'DO_NOTHING', 'QUOTE_POST'
+
+    # CORS: comma-separated list of allowed frontend origins
+    ALLOWED_ORIGINS = [
+        o.strip() for o in os.environ.get(
+            'ALLOWED_ORIGINS',
+            'http://localhost:3000,http://localhost:5173'
+        ).split(',') if o.strip()
     ]
-    OASIS_REDDIT_ACTIONS = [
-        'LIKE_POST', 'DISLIKE_POST', 'CREATE_POST', 'CREATE_COMMENT',
-        'LIKE_COMMENT', 'DISLIKE_COMMENT', 'SEARCH_POSTS', 'SEARCH_USER',
-        'TREND', 'REFRESH', 'DO_NOTHING', 'FOLLOW', 'MUTE'
-    ]
-    
-    # Report Agent configuration
-    REPORT_AGENT_MAX_TOOL_CALLS = int(os.environ.get('REPORT_AGENT_MAX_TOOL_CALLS', '5'))
-    REPORT_AGENT_MAX_REFLECTION_ROUNDS = int(os.environ.get('REPORT_AGENT_MAX_REFLECTION_ROUNDS', '2'))
-    REPORT_AGENT_TEMPERATURE = float(os.environ.get('REPORT_AGENT_TEMPERATURE', '0.5'))
-    
+
     @classmethod
     def validate(cls):
         """Validate required configuration"""
         errors = []
         if not cls.LLM_API_KEY:
             errors.append("LLM_API_KEY not configured")
-        if not cls.NEO4J_URI or not cls.NEO4J_USERNAME or not cls.NEO4J_PASSWORD:
-            errors.append("Neo4j configuration incomplete")
+        if not cls.SUPABASE_URL or not cls.SUPABASE_SECRET_KEY:
+            errors.append("Supabase configuration incomplete")
         return errors
-

@@ -1,5 +1,5 @@
 # ===========================================
-# MiroFish Backend Dependencies
+# FirstBreath Backend Dependencies
 # ===========================================
 # Python 3.11+ required
 # Install: pip install -r requirements.txt
@@ -11,29 +11,20 @@ flask-cors>=6.0.0
 flask-socketio>=5.3.0
 python-socketio>=5.10.0
 python-engineio>=4.8.0
-eventlet>=0.35.0  # Async support
 
-# ============= LLM Related =============
-# OpenAI SDK (unified OpenAI format for LLM calls)
+# ============= Database (Supabase Postgres) =============
+supabase>=2.0.0
+psycopg[binary]>=3.1.0
+
+# ============= LLM (OpenRouter / OpenAI-compatible) =============
 openai>=1.0.0
-
-# ============= Zep Cloud =============
-zep-cloud==3.13.0
-
-# ============= OASIS Social Media Simulation =============
-# OASIS social simulation framework
-camel-oasis==0.2.5
-camel-ai==0.2.78
 
 # ============= File Processing =============
 PyMuPDF>=1.24.0
-# Encoding detection (supports non-UTF-8 encoded text files)
 charset-normalizer>=3.0.0
 chardet>=5.0.0
 
 # ============= Utility Libraries =============
-# Environment variable loading
 python-dotenv>=1.0.0
-
-# Data validation
 pydantic>=2.0.0
+httpx>=0.25.0

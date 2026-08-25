@@ -1,11 +1,11 @@
 [project]
-name = "mirofish-backend"
-version = "0.1.0"
-description = "MiroFish - Simple and universal collective intelligence engine for predicting everything"
+name = "firstbreath-backend"
+version = "0.2.0"
+description = "FirstBreath - multi-agent emergency response simulation for the Golden Hour"
 requires-python = ">=3.11"
 license = { text = "AGPL-3.0" }
 authors = [
-    { name = "MiroFish Team" }
+    { name = "FirstBreath Team" }
 ]
 
 dependencies = [
@@ -13,16 +13,15 @@ dependencies = [
     "flask>=3.0.0",
     "flask-cors>=6.0.0",
     "flask-socketio>=5.3.0",
-    # LLM Related (Codemax - Anthropic compatible)
+    # Database (Supabase Postgres)
+    "supabase>=2.0.0",
+    "psycopg[binary]>=3.1.0",
+    # LLM (OpenRouter / OpenAI-compatible)
+    "openai>=1.0.0",
     "httpx>=0.25.0",
-    # Neo4j Graph Database
-    "neo4j>=5.23.0",
-    # OASIS Social Media Simulation
-    "camel-oasis==0.2.5",
-    "camel-ai==0.2.78",
     # File Processing
     "PyMuPDF>=1.24.0",
-    # Encoding Detection (supports non-UTF-8 encoded text files)
+    # Encoding Detection
     "charset-normalizer>=3.0.0",
     "chardet>=5.0.0",
     # Utility Libraries
@@ -34,7 +33,6 @@ dependencies = [
 dev = [
     "pytest>=8.0.0",
     "pytest-asyncio>=0.23.0",
-    "pipreqs>=0.5.0",
 ]
 
 [build-system]

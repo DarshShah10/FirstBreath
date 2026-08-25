@@ -1,29 +1,19 @@
-FROM python:3.11
-
-# Install Node.js (>=18) and required tools
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends nodejs npm \
-  && rm -rf /var/lib/apt/lists/*
+FROM python:3.11-slim
 
 # Copy uv from official image
 COPY --from=ghcr.io/astral-sh/uv:0.9.26 /uv /uvx /bin/
 
 WORKDIR /app
 
-# Copy dependency files first to leverage caching
-COPY package.json package-lock.json ./
-COPY frontend/package.json frontend/package-lock.json ./frontend/
-COPY backend/pyproject.toml backend/uv.lock ./backend/
+# Install dependencies first (cached layer)
+COPY backend/pyproject.toml backend/uv.lock* ./backend/
+RUN cd backend && uv sync --frozen --no-dev || cd backend && uv sync --no-dev
 
-# Install dependencies (Node + Python)
-RUN npm ci \
-  && npm ci --prefix frontend \
-  && cd backend && uv sync --frozen
+# Copy backend source
+COPY backend ./backend
 
-# Copy project source code
-COPY . .
+WORKDIR /app/backend
 
-EXPOSE 3000 5001
+EXPOSE 5001
 
-# Start both frontend and backend (development mode)
-CMD ["npm", "run", "dev"]
+CMD ["uv", "run", "python", "run.py"]

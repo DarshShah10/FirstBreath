@@ -1,4 +1,4 @@
-import axios from 'axios';
+﻿import axios from 'axios';
 import type {
   DistressSignal,
   Simulation,
@@ -140,7 +140,7 @@ export const getStatus = async () => {
   return response.data;
 };
 
-// ── Agentic runtime APIs ────────────────────────────────────────────
+// â”€â”€ Agentic runtime APIs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface WorldSnapshot {
   simulation_id: string;
@@ -169,6 +169,7 @@ export interface WorldSnapshot {
     deadline: number; minutes_left: number;
     timeline: Array<{ sim_time: number; note: string }>;
   }>;
+  runtime_status?: string;
   routes: Array<{
     id: string; name: string; worst_condition: string;
     from: { lat: number; lng: number }; to: { lat: number; lng: number };
@@ -211,3 +212,4 @@ export const getHistory = async (): Promise<Record<string, any>[]> => {
 };
 
 export default api;
+

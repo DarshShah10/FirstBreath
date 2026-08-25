@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional, Union
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from .state import (
     AMB_AT_HOSPITAL, AMB_AVAILABLE, AMB_DISPATCHED, AMB_RETURNING,
@@ -21,14 +21,18 @@ from .state import (
     CONDITION_MULTIPLIERS, ROUTE_BLOCKED, STAFF_PAGED, WorldState,
     DEPART_TIME, PAGE_RESPONSE_BASE, draw_float,
 )
-from .events import make_event, ACTION_REJECTED, DISPATCH, PRE_ALERT, REROUTE
+from .events import make_event, ACTION_REJECTED, DISPATCH, PRE_ALERT, REROUTE, OT_RESERVED as OT_RESERVED_EV
 
 
 # ---------------------------------------------------------------------------
 # Pydantic contracts â€” what LLM agents must emit
 # ---------------------------------------------------------------------------
 
-class DispatchAmbulance(BaseModel):
+class _Action(BaseModel):
+    model_config = ConfigDict(extra='ignore')
+
+
+class DispatchAmbulance(_Action):
     """Send an ambulance to a case's patient location, bound to a hospital."""
     kind: Literal["dispatch_ambulance"] = "dispatch_ambulance"
     case_id: str
@@ -37,7 +41,7 @@ class DispatchAmbulance(BaseModel):
     rationale: str = ""
 
 
-class PreAlertHospital(BaseModel):
+class PreAlertHospital(_Action):
     """Warn a hospital that a case is inbound so it can prep OT/staff."""
     kind: Literal["pre_alert_hospital"] = "pre_alert_hospital"
     case_id: str
@@ -45,7 +49,15 @@ class PreAlertHospital(BaseModel):
     rationale: str = ""
 
 
-class RerouteAmbulance(BaseModel):
+class PrepareOt(_Action):
+    """Reserve + start preparing an operating theater (~10 min prep)."""
+    kind: Literal["prepare_ot"] = "prepare_ot"
+    hospital_id: str
+    case_id: str
+    rationale: str = ""
+
+
+class RerouteAmbulance(_Action):
     """Switch an en-route ambulance onto a specific alternate route."""
     kind: Literal["reroute_ambulance"] = "reroute_ambulance"
     ambulance_id: str
@@ -53,7 +65,7 @@ class RerouteAmbulance(BaseModel):
     rationale: str = ""
 
 
-class RequestBlood(BaseModel):
+class RequestBlood(_Action):
     kind: Literal["request_blood"] = "request_blood"
     case_id: str
     hospital_id: str
@@ -62,7 +74,7 @@ class RequestBlood(BaseModel):
     rationale: str = ""
 
 
-class PageStaff(BaseModel):
+class PageStaff(_Action):
     kind: Literal["page_staff"] = "page_staff"
     hospital_id: str
     specialization: str
@@ -70,7 +82,7 @@ class PageStaff(BaseModel):
     rationale: str = ""
 
 
-class UpdateTraffic(BaseModel):
+class UpdateTraffic(_Action):
     """Rule-based actor / scenario input: change a route segment's condition."""
     kind: Literal["update_traffic"] = "update_traffic"
     route_id: str
@@ -80,7 +92,7 @@ class UpdateTraffic(BaseModel):
     rationale: str = ""
 
 
-class Escalate(BaseModel):
+class Escalate(_Action):
     """Declare on-record that a case cannot meet its window as things stand."""
     kind: Literal["escalate"] = "escalate"
     case_id: str
@@ -88,18 +100,19 @@ class Escalate(BaseModel):
     rationale: str = ""
 
 
-class NoOp(BaseModel):
+class NoOp(_Action):
     kind: Literal["noop"] = "noop"
     rationale: str = ""
 
 
 Action = Union[
-    DispatchAmbulance, PreAlertHospital, RerouteAmbulance, RequestBlood,
+    DispatchAmbulance, PreAlertHospital, PrepareOt, RerouteAmbulance, RequestBlood,
     PageStaff, UpdateTraffic, Escalate, NoOp,
 ]
 
 
 class DecisionList(BaseModel):
+    model_config = ConfigDict(extra='ignore')
     """The structured output every LLM agent returns each invocation."""
     decisions: List[Action] = Field(default_factory=list)
     radio_messages: List[str] = Field(default_factory=list)
@@ -148,8 +161,8 @@ def apply_action(state: WorldState, run_id: str, agent_id: str, action: Any) -> 
     if isinstance(action, dict):
         # tolerate plain dicts from JSON
         kind = action.get("kind")
-        cls = {c.model_fields["kind"].default: c for c in (
-            DispatchAmbulance, PreAlertHospital, RerouteAmbulance, RequestBlood,
+        cls = {x.model_fields['kind'].default: x for x in (
+            DispatchAmbulance, PreAlertHospital, PrepareOt, RerouteAmbulance, RequestBlood,
             PageStaff, UpdateTraffic, Escalate, NoOp,
         )}.get(kind)
         if cls is None:
@@ -230,6 +243,37 @@ def apply_action(state: WorldState, run_id: str, agent_id: str, action: Any) -> 
             },
         )]
         return ActionResult(True, "pre-alerted", ev)
+
+    if isinstance(action, PrepareOt):
+        hosp = state.hospitals.get(action.hospital_id)
+        if hosp is None:
+            return _reject(state, run_id, agent_id, f"unknown hospital {action.hospital_id}")
+        if hosp["ot_prep_started"] is not None and hosp["ot_ready_at"] is None:
+            return _reject(state, run_id, agent_id,
+                           f"{hosp['name']} OT already preparing")
+        if hosp["ot_available"] <= 0:
+            ev = [make_event(
+                run_id, "action_rejected", state.sim_time, agent_id=agent_id,
+                agent_type="hospital",
+                payload={"reason": f"{hosp['name']} has NO free OT — diversion recommended",
+                         "hospital_id": hosp["id"], "case_id": action.case_id},
+            )]
+            return ActionResult(False, "no OT available", ev)
+        hosp["ot_prep_started"] = state.sim_time
+        hosp["ot_ready_at"] = None
+        hosp["ot_available"] -= 1
+        hosp["ot_reserved"] += 1
+        hosp["receiving_case"] = action.case_id
+        ev = [make_event(
+            run_id, OT_RESERVED_EV, state.sim_time, agent_id=agent_id, agent_type="hospital",
+            payload={
+                "description": f"{hosp['name']} reserving + prepping OT for {action.case_id} "
+                               f"(ready ~T+{state.sim_time + 10:.0f})",
+                "hospital_id": hosp["id"], "case_id": action.case_id,
+                "rationale": action.rationale,
+            },
+        )]
+        return ActionResult(True, "ot prep started", ev)
 
     if isinstance(action, RerouteAmbulance):
         amb = state.ambulances.get(action.ambulance_id)
@@ -398,4 +442,7 @@ def _seek_position_on_new_route(state: WorldState, amb: Dict[str, Any], target_m
             amb["seg_progress"] = max(0.0, frac)
             return
         acc += dur
+
+
+
 

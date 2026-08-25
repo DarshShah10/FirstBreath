@@ -1,5 +1,5 @@
-"""
-AgenticRuntime — hosts LangGraph agentic runs for the API layer.
+﻿"""
+AgenticRuntime â€” hosts LangGraph agentic runs for the API layer.
 
 One record per simulation_id. The graph owns the world; this service
 mirrors it, streams events over Socket.IO, buffers them for the
@@ -95,7 +95,7 @@ class AgenticRuntime:
             except Exception as e:
                 logger.debug(f"socket emit failed: {e}")
 
-        # persist (batched, best-effort) — skip noisy ticks
+        # persist (batched, best-effort) â€” skip noisy ticks
         if fresh and database.enabled:
             try:
                 run_id = database.get_run(rec["simulation_id"])  # may be None
@@ -166,7 +166,7 @@ class AgenticRuntime:
                     if not isinstance(update, dict):
                         continue
                     llm_calls += update.get("llm_calls", 0) or 0
-                    tev = update.get("tick_events") or []
+                    tev = update.get("fresh_events") or []
                     if tev:
                         cls._emit(rec, tev)
                     if "world" in update:
@@ -328,3 +328,4 @@ def get_socketio_safe():
 
 from ..world.state import WorldState  # noqa: E402  (bottom import avoids cycle)
 from ..world.engine import WorldEngine  # noqa: E402
+

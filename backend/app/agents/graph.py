@@ -68,7 +68,8 @@ class GraphState(TypedDict, total=False):
 
     # accumulators
     event_log: Annotated[List[Dict[str, Any]], _append]
-    tick_events: List[Dict[str, Any]]
+    fresh_events: List[Dict[str, Any]]   # exactly-once stream to listeners
+    event_window: List[Dict[str, Any]]   # attention-router memory
     radio: Annotated[List[str], _radio_window]
     proposals: Annotated[List[Dict[str, Any]], _append]
     decision_log: Annotated[List[Dict[str, Any]], _append]
@@ -282,7 +283,8 @@ def init_node(state: GraphState) -> GraphState:
     return {
         "world": eng.state.to_dict(),
         "event_log": events,
-        "tick_events": events,
+        "fresh_events": events,
+        "event_window": events,
         "radio_flushed_count": 0,
         "llm_calls": 0,
     }
@@ -291,23 +293,22 @@ def init_node(state: GraphState) -> GraphState:
 def world_tick(state: GraphState) -> GraphState:
     ws = WorldState.from_dict(state["world"])
     events = tick(ws, state["run_id"], dt=state.get("dt", DT))
+    # accumulate onto whatever apply_actions left (its events stay visible
+    # to the attention router until the next apply cycle replaces them)
     out: GraphState = {"world": ws.to_dict(),
-                       "tick_events": events}
+                       "fresh_events": events,
+                       "event_window": (state.get("event_window") or []) + events,
+                       "event_log": events}
     if ws.is_terminal():
         outcomes = {cid: c["outcome"] for cid, c in ws.cases.items()}
         wins = sum(1 for o in outcomes.values() if o and "success" in str(o))
-        out["tick_events"].append(make_event(
+        out["fresh_events"].append(make_event(
             state["run_id"], RUN_COMPLETED_EV, ws.sim_time, agent_type="system",
-            payload={"description": f"Run complete at T+{ws.sim_time:.0f}m â€” "
+            payload={"description": f"Run complete at T+{ws.sim_time:.0f}m — "
                                     f"{wins}/{len(outcomes)} delivered within care",
                      "outcomes": outcomes},
         ))
     return out
-
-
-def check_terminal(state: GraphState) -> Literal["route_attention", "__end__"]:
-    ws = WorldState.from_dict(state["world"])
-    return "__end__" if ws.is_terminal() else "route_attention"
 
 
 def route_attention(state: GraphState):
@@ -319,7 +320,7 @@ def route_attention(state: GraphState):
     ws = WorldState.from_dict(state["world"])
     if ws.is_terminal():
         return "__end__"
-    events = state.get("tick_events") or []
+    events = state.get("event_window") or []
 
     wakes: Dict[tuple, List[str]] = {}
 
@@ -424,7 +425,10 @@ def apply_actions_node(state: GraphState) -> GraphState:
     return {
         "world": ws.to_dict(),
         "event_log": new_events,
-        "tick_events": [],
+        # refresh the attention window with our events; fresh_events streams
+        # them exactly once to listeners
+        "event_window": new_events,
+        "fresh_events": new_events,
         "proposals": [],
         "radio_flushed_count": len(radio),
     }
@@ -452,5 +456,6 @@ def build_run_graph(checkpointer=None):
     builder.add_edge("apply_actions", "world_tick")
 
     return builder.compile(checkpointer=checkpointer)
+
 
 

@@ -1,5 +1,5 @@
-"""
-Festival conflict demo — the canonical FirstBreath scenario.
+﻿"""
+Festival conflict demo â€” the canonical FirstBreath scenario.
 
 Two simultaneous emergencies during Ganesh Chaturthi:
   1. fetal distress (critical, 20-min window)
@@ -86,7 +86,7 @@ def main():
     }
 
     print("=" * 70)
-    print(f" FIRSTBREATH AGENTIC RUN — mode={args.mode} seed={args.seed}")
+    print(f" FIRSTBREATH AGENTIC RUN â€” mode={args.mode} seed={args.seed}")
     print("=" * 70)
 
     t0 = time.time()
@@ -98,7 +98,7 @@ def main():
             if not isinstance(update, dict):
                 continue
             llm_calls += update.get("llm_calls", 0) or 0
-            for ev in update.get("tick_events") or []:
+            for ev in update.get("fresh_events") or []:
                 et = ev.get("event_type")
                 if et in ("tick",):
                     continue
@@ -133,3 +133,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

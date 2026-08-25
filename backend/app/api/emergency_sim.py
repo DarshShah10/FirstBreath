@@ -34,6 +34,7 @@ from ..models.emergency_case import (
     EmergencySeverity, EmergencyType
 )
 from ..models.response_resource import ResourceLocation
+from ..db import db as database
 
 logger = get_logger('mirofish.api.v1')
 
@@ -168,6 +169,16 @@ class SimulationManager:
             }
 
             logger.info(f"Simulation created: {sim_id}")
+
+            # Persist to Supabase (no-op when not configured)
+            try:
+                database.create_simulation(
+                    meta=self._simulations[sim_id]["config"],
+                    simulation_id=sim_id,
+                )
+            except Exception as e:
+                logger.warning(f"Simulation persistence failed: {e}")
+
             return {"simulation_id": sim_id, "status": "created"}
 
     def get_simulation(self, simulation_id: str) -> Optional[Dict[str, Any]]:
@@ -193,6 +204,15 @@ class SimulationManager:
 
             sim["status"] = "running"
 
+        # Start a persisted run record
+        run_id = None
+        try:
+            run_id = database.start_run(simulation_id)
+            with self._lock:
+                sim["run_id"] = run_id
+        except Exception as e:
+            logger.warning(f"Run persistence failed: {e}")
+
         engine = sim["engine"]
 
         # Set up step callback for WebSocket updates
@@ -203,11 +223,36 @@ class SimulationManager:
         engine.on_step(step_callback)
 
         # Run simulation
-        results = engine.run(duration_minutes=duration_minutes, max_steps=max_steps)
+        try:
+            results = engine.run(duration_minutes=duration_minutes, max_steps=max_steps)
+        except Exception as e:
+            if run_id:
+                database.finish_run(run_id, "failed", results={"error": str(e)})
+            raise
 
         with self._lock:
             sim["status"] = "completed"
             sim["results"] = results
+
+        # Persist final results
+        if run_id:
+            try:
+                database.finish_run(
+                    run_id,
+                    "completed",
+                    results={"summary": results.get("metrics"), "cases": {
+                        c.get("case_id"): {k: v for k, v in c.items() if k != "actionable_analysis"}
+                        for c in results.get("completed_cases", [])
+                    }},
+                    metrics=results.get("metrics"),
+                )
+                for cid, analysis in (results.get("actionable_analyses") or {}).items():
+                    database.update_case(cid, status="completed", outcome={
+                        "bottlenecks": len(analysis.get("bottlenecks", [])),
+                        "recommendations": len(analysis.get("recommendations", [])),
+                    })
+            except Exception as e:
+                logger.warning(f"Results persistence failed: {e}")
 
         logger.info(f"Simulation {simulation_id} completed")
         return results
@@ -249,6 +294,14 @@ class SimulationManager:
             engine.stop()
             sim["status"] = "stopped"
 
+        # Persist stopped run
+        run_id = sim.get("run_id")
+        if run_id:
+            try:
+                database.finish_run(run_id, "stopped")
+            except Exception as e:
+                logger.warning(f"Stop persistence failed: {e}")
+
         return {"status": "stopped", "simulation_id": simulation_id}
 
     def add_case(
@@ -273,6 +326,13 @@ class SimulationManager:
         # Add to engine
         engine = sim["engine"]
         case_id = engine.add_case(signal)
+
+        # Persist the case
+        try:
+            database.upsert_case(simulation_id, case_id, result["signal"])
+            database.update_simulation(simulation_id)
+        except Exception as e:
+            logger.warning(f"Case persistence failed: {e}")
 
         return {"case_id": case_id, "status": "queued"}
 
@@ -828,3 +888,65 @@ def get_status():
     except Exception as e:
         logger.error(f"Error getting status: {str(e)}")
         return jsonify({"status": "error", "error": str(e)}), 500
+
+
+# =============================================================================
+# Event Log & History Endpoints
+# =============================================================================
+
+@emergency_sim_bp.route('/simulations/<simulation_id>/events', methods=['GET'])
+def get_simulation_events(simulation_id: str):
+    """
+    Get the event log for a simulation's latest (or specified) run.
+
+    Query params:
+    - run_id: specific run (default: latest run for this simulation)
+    - after_id: return only events with id > this (incremental polling)
+    - limit: max events returned (default 1000)
+    """
+    try:
+        run_id = request.args.get('run_id')
+        if not run_id:
+            sim = get_simulation_manager().get_simulation(simulation_id)
+            run_id = sim.get("run_id") if sim else None
+        if not run_id:
+            return jsonify({"success": True, "run_id": None, "events": []}), 200
+
+        after_id = request.args.get('after_id', 0, type=int)
+        limit = min(request.args.get('limit', 1000, type=int), 5000)
+        events = database.get_events(run_id, limit=limit, after_id=after_id)
+
+        return jsonify({
+            "success": True,
+            "run_id": run_id,
+            "count": len(events),
+            "events": events,
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error getting events: {str(e)}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@emergency_sim_bp.route('/history', methods=['GET'])
+def get_history():
+    """List past simulations and their runs from the database."""
+    try:
+        sims = database.list_simulations(limit=50)
+        return jsonify({"success": True, "simulations": sims}), 200
+    except Exception as e:
+        logger.error(f"Error getting history: {str(e)}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@emergency_sim_bp.route('/runs/<run_id>', methods=['GET'])
+def get_run_detail(run_id: str):
+    """Get a persisted run record by ID."""
+    try:
+        run = database.get_run(run_id)
+        if not run:
+            return jsonify({"success": False, "error": "Run not found"}), 404
+        return jsonify({"success": True, "run": run}), 200
+    except Exception as e:
+        logger.error(f"Error getting run: {str(e)}")
+        return jsonify({"success": False, "error": str(e)}), 500

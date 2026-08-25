@@ -1,5 +1,5 @@
 """
-MiroFish Backend Entry Point
+FirstBreath Backend Entry Point
 """
 
 import os
@@ -38,9 +38,9 @@ def main():
     app = result[0] if isinstance(result, tuple) else result
     socketio = result[1] if isinstance(result, tuple) else None
 
-    # Get runtime config
+    # Get runtime config (Render/Railway inject PORT)
     host = os.environ.get('FLASK_HOST', '0.0.0.0')
-    port = int(os.environ.get('FLASK_PORT', 5001))
+    port = int(os.environ.get('PORT', os.environ.get('FLASK_PORT', 5001)))
     debug = Config.DEBUG
 
     # Start service (use SocketIO if available)

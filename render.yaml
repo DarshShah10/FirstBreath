@@ -1,0 +1,27 @@
+# Render Blueprint — FirstBreath backend
+# Deploy: Render Dashboard -> New -> Blueprint -> point at this repo
+services:
+  - type: web
+    name: firstbreath-backend
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: FLASK_DEBUG
+        value: "False"
+      - key: LLM_API_KEY
+        sync: false
+      - key: LLM_BASE_URL
+        value: https://openrouter.ai/api/v1
+      - key: LLM_MODEL_NAME
+        value: stealth/ox-alpha
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SECRET_KEY
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ALLOWED_ORIGINS
+        value: https://firstbreath.vercel.app,http://localhost:3000

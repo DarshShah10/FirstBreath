@@ -8,7 +8,7 @@ import type {
   ResourceData
 } from '../types';
 
-const API_BASE = '/api/v1';
+const API_BASE = import.meta.env.VITE_API_URL || '/api/v1';
 
 const api = axios.create({
   baseURL: API_BASE,

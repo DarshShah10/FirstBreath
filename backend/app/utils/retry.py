@@ -12,6 +12,29 @@ from ..utils.logger import get_logger
 logger = get_logger('mirofish.retry')
 
 
+def with_retry(
+    max_attempts: int = 3,
+    delay: float = 1.0,
+    exceptions: Tuple[Type[Exception], ...] = (Exception,),
+):
+    """
+    Retry decorator with exponential backoff.
+
+    Thin convenience wrapper around retry_with_backoff with the
+    parameter names used across the codebase.
+
+    Usage:
+        @with_retry(max_attempts=3, delay=1.0)
+        def call_api():
+            ...
+    """
+    return retry_with_backoff(
+        max_retries=max_attempts,
+        initial_delay=delay,
+        exceptions=exceptions,
+    )
+
+
 def retry_with_backoff(
     max_retries: int = 3,
     initial_delay: float = 1.0,

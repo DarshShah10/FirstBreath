@@ -8,7 +8,6 @@ import uuid
 from flask import Blueprint, request, jsonify
 from datetime import datetime
 
-from . import simulation_bp
 from ..config import Config
 from ..utils.logger import get_logger
 from ..services.emergency_response import (

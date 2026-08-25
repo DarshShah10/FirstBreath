@@ -2,9 +2,6 @@
 Data Models Module
 """
 
-from .task import TaskManager, TaskStatus
-from .project import Project, ProjectStatus, ProjectManager
-
 # Emergency Response Models
 from .emergency_case import (
     EmergencyCase,
@@ -40,9 +37,6 @@ from .response_action import (
 )
 
 __all__ = [
-    # Base models
-    'TaskManager', 'TaskStatus',
-    'Project', 'ProjectStatus', 'ProjectManager',
     # Emergency case models
     'EmergencyCase', 'DistressSignal', 'EmergencySeverity',
     'EmergencyType', 'Location', 'PatientInfo',

@@ -42,12 +42,6 @@ def create_app(config_class=Config):
     # 启用CORS
     CORS(app, resources={r"/api/*": {"origins": "*"}})
 
-    # Register simulation process cleanup function (ensures all simulation processes terminate when server closes)
-    from .services.simulation_runner import SimulationRunner
-    SimulationRunner.register_cleanup()
-    if should_log_startup:
-        logger.info("Registered simulation process cleanup function")
-
     # 请求日志中间件
     @app.before_request
     def log_request():
@@ -63,12 +57,8 @@ def create_app(config_class=Config):
         return response
 
     # 注册蓝图
-    from .api import graph_bp, simulation_bp, report_bp
     from .api.emergency import emergency_bp
     from .api.emergency_sim import emergency_sim_bp, init_socketio
-    app.register_blueprint(graph_bp, url_prefix='/api/graph')
-    app.register_blueprint(simulation_bp, url_prefix='/api/simulation')
-    app.register_blueprint(report_bp, url_prefix='/api/report')
     app.register_blueprint(emergency_bp, url_prefix='/api/emergency')
     app.register_blueprint(emergency_sim_bp, url_prefix='/api/v1')
 

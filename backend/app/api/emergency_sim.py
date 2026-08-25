@@ -1,4 +1,4 @@
-"""
+﻿"""
 Emergency Simulation API - V1 REST + WebSocket.
 
 Complete simulation management endpoints:
@@ -35,6 +35,7 @@ from ..models.emergency_case import (
 )
 from ..models.response_resource import ResourceLocation
 from ..db import db as database
+from ..runtime import AgenticRuntime
 
 logger = get_logger('mirofish.api.v1')
 
@@ -165,7 +166,9 @@ class SimulationManager:
                     "mode": mode,
                     "max_concurrent_cases": max_concurrent_cases
                 },
-                "results": None
+                "results": None,
+                "signals": [],          # raw distress signals (agentic mode)
+                "run_id": None,
             }
 
             logger.info(f"Simulation created: {sim_id}")
@@ -191,9 +194,12 @@ class SimulationManager:
         simulation_id: str,
         duration_minutes: float = 60,
         max_steps: Optional[int] = None,
-        callback: Optional[callable] = None
+        callback: Optional[callable] = None,
+        engine: str = 'deterministic',
+        seed: str = 'golden-hour',
+        brain_mode: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """Run a simulation."""
+        """Run a simulation (deterministic or agentic)."""
         with self._lock:
             sim = self._simulations.get(simulation_id)
             if not sim:
@@ -202,6 +208,28 @@ class SimulationManager:
             if sim["status"] == "running":
                 return {"error": "Simulation is already running"}
 
+        # â”€â”€ agentic path: LangGraph runtime owns everything â”€â”€
+        if engine == "agentic":
+            signals = sim.get("signals") or []
+            if not signals:
+                return {"error": "No cases queued for this simulation"}
+            ok = AgenticRuntime.start(
+                simulation_id=simulation_id,
+                signals=signals,
+                seed=seed,
+                horizon_minutes=float(duration_minutes),
+                mode=brain_mode or 'llm',
+                speed=sim['config'].get('simulation_speed', 60.0),
+            )
+            if not ok:
+                return {"error": "Agentic run already active for this simulation"}
+            with self._lock:
+                sim["status"] = "running"
+            logger.info(f"Agentic simulation started: {simulation_id} ({len(signals)} case(s))")
+            return {"status": "running", "engine": "agentic"}
+
+        # â”€â”€ deterministic path (legacy engine) â”€â”€
+        with self._lock:
             sim["status"] = "running"
 
         # Start a persisted run record
@@ -324,8 +352,11 @@ class SimulationManager:
         signal = DistressSignal.from_dict(result["signal"])
 
         # Add to engine
-        engine = sim["engine"]
-        case_id = engine.add_case(signal)
+        engine_obj = sim["engine"]
+        case_id = engine_obj.add_case(signal)
+
+        # keep raw signal for agentic mode
+        sim.setdefault("signals", []).append(result["signal"])
 
         # Persist the case
         try:
@@ -518,7 +549,10 @@ def run_simulation(simulation_id: str):
             manager.run_simulation(
                 simulation_id,
                 duration_minutes=data.get('duration_minutes', 60),
-                max_steps=data.get('max_steps')
+                max_steps=data.get('max_steps'),
+                engine=data.get('engine', 'deterministic'),
+                seed=data.get('seed', 'golden-hour'),
+                brain_mode=data.get('mode'),
             )
 
         thread = threading.Thread(target=run_async)
@@ -540,6 +574,11 @@ def run_simulation(simulation_id: str):
 def pause_simulation(simulation_id: str):
     """Pause a running simulation."""
     try:
+        # agentic runs first
+        st = AgenticRuntime.status(simulation_id)
+        if st and AgenticRuntime.pause(simulation_id):
+            return jsonify({"success": True, "status": "paused", "engine": "agentic"}), 200
+
         manager = get_simulation_manager()
         result = manager.pause_simulation(simulation_id)
 
@@ -557,6 +596,10 @@ def pause_simulation(simulation_id: str):
 def resume_simulation(simulation_id: str):
     """Resume a paused simulation."""
     try:
+        st = AgenticRuntime.status(simulation_id)
+        if st and AgenticRuntime.resume(simulation_id):
+            return jsonify({"success": True, "status": "running", "engine": "agentic"}), 200
+
         manager = get_simulation_manager()
         result = manager.resume_simulation(simulation_id)
 
@@ -574,6 +617,11 @@ def resume_simulation(simulation_id: str):
 def stop_simulation(simulation_id: str):
     """Stop a simulation."""
     try:
+        st = AgenticRuntime.status(simulation_id)
+        if st and st.get("status") in ("running", "paused", "starting"):
+            AgenticRuntime.stop(simulation_id)
+            return jsonify({"success": True, "status": "stopped", "engine": "agentic"}), 200
+
         manager = get_simulation_manager()
         result = manager.stop_simulation(simulation_id)
 
@@ -591,6 +639,23 @@ def stop_simulation(simulation_id: str):
 def get_simulation_results(simulation_id: str):
     """Get simulation results."""
     try:
+        # agentic results first
+        st = AgenticRuntime.status(simulation_id)
+        if st:
+            snap = AgenticRuntime.snapshot(simulation_id) or {}
+            return jsonify({
+                "success": True,
+                "results": {
+                    "engine": "agentic",
+                    "status": st["status"],
+                    "sim_time": st["sim_time"],
+                    "outcomes": (AgenticRuntime._runs.get(simulation_id, {}).get("outcomes")
+                                 or {}),
+                    "cases": snap.get("cases", []),
+                    "error": st.get("error"),
+                },
+            }), 200
+
         manager = get_simulation_manager()
         results = manager.get_results(simulation_id)
 
@@ -602,6 +667,49 @@ def get_simulation_results(simulation_id: str):
     except Exception as e:
         logger.error(f"Error getting results: {str(e)}")
         return jsonify({"success": False, "error": str(e)}), 500
+
+
+# =============================================================================
+# Agentic Runtime Endpoints
+# =============================================================================
+
+@emergency_sim_bp.route('/simulations/<simulation_id>/snapshot', methods=['GET'])
+def get_world_snapshot(simulation_id: str):
+    """Live world snapshot for the mission-control console."""
+    try:
+        snap = AgenticRuntime.snapshot(simulation_id)
+        if snap is None:
+            return jsonify({
+                "success": False,
+                "error": "No agentic run for this simulation",
+                "hint": "POST /run with {\"engine\": \"agentic\"} first",
+            }), 404
+        return jsonify({"success": True, "snapshot": snap}), 200
+    except Exception as e:
+        logger.error(f"snapshot error: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@emergency_sim_bp.route('/simulations/<simulation_id>/d3', methods=['GET'])
+def get_d3_graph(simulation_id: str):
+    """Live response-chain graph in D3 force format."""
+    try:
+        d3 = AgenticRuntime.d3(simulation_id)
+        if d3 is None:
+            return jsonify({"success": False, "error": "No agentic run"}), 404
+        return jsonify({"success": True, **d3}), 200
+    except Exception as e:
+        logger.error(f"d3 error: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@emergency_sim_bp.route('/simulations/<simulation_id>/runtime', methods=['GET'])
+def get_runtime_status(simulation_id: str):
+    """Agentic runtime status probe."""
+    st = AgenticRuntime.status(simulation_id)
+    if not st:
+        return jsonify({"success": False, "error": "No agentic run"}), 404
+    return jsonify({"success": True, **st}), 200
 
 
 # =============================================================================
@@ -905,6 +1013,19 @@ def get_simulation_events(simulation_id: str):
     - limit: max events returned (default 1000)
     """
     try:
+        # live agentic transcript first
+        st = AgenticRuntime.status(simulation_id)
+        if st:
+            after_seq = request.args.get('after_id', 0, type=int)
+            limit = min(request.args.get('limit', 500, type=int), 2000)
+            events = AgenticRuntime.events_since(simulation_id, after_seq, limit)
+            return jsonify({
+                "success": True,
+                "run_id": simulation_id,
+                "count": len(events),
+                "events": events,
+            }), 200
+
         run_id = request.args.get('run_id')
         if not run_id:
             sim = get_simulation_manager().get_simulation(simulation_id)
@@ -950,3 +1071,4 @@ def get_run_detail(run_id: str):
     except Exception as e:
         logger.error(f"Error getting run: {str(e)}")
         return jsonify({"success": False, "error": str(e)}), 500
+

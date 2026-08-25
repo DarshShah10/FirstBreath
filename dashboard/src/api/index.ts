@@ -42,7 +42,12 @@ export const getSimulation = async (simulationId: string): Promise<{
 
 export const runSimulation = async (
   simulationId: string,
-  config?: { duration_minutes?: number; max_steps?: number }
+  config?: {
+    duration_minutes?: number;
+    max_steps?: number;
+    engine?: 'agentic' | 'deterministic';
+    seed?: string;
+  }
 ): Promise<{ simulation_id: string; status: string }> => {
   const response = await api.post(`/simulations/${simulationId}/run`, config || {});
   return response.data;
@@ -133,6 +138,76 @@ export const healthCheck = async () => {
 export const getStatus = async () => {
   const response = await api.get('/status');
   return response.data;
+};
+
+// ── Agentic runtime APIs ────────────────────────────────────────────
+
+export interface WorldSnapshot {
+  simulation_id: string;
+  sim_time: number;
+  running: boolean;
+  ambulances: Array<{
+    id: string; name: string; status: string;
+    location: { lat: number; lng: number };
+    case_id: string | null; hospital_id: string | null;
+    eta_min: number | null; reroute_count: number;
+  }>;
+  hospitals: Array<{
+    id: string; name: string; level: string;
+    location: { lat: number; lng: number };
+    ot_total: number; ot_available: number; ot_reserved: number;
+    ot_ready: boolean; nicu_beds: number;
+    staff: Array<{ id: string; name: string; specialization: string; status: string }>;
+    contact_phone: string;
+  }>;
+  cases: Array<{
+    id: string; status: string; outcome: string | null;
+    emergency_type: string; severity: string;
+    location: { lat: number; lng: number; address?: string };
+    patient: Record<string, unknown>;
+    ambulance_id: string | null; hospital_id: string | null;
+    deadline: number; minutes_left: number;
+    timeline: Array<{ sim_time: number; note: string }>;
+  }>;
+  routes: Array<{
+    id: string; name: string; worst_condition: string;
+    from: { lat: number; lng: number }; to: { lat: number; lng: number };
+    alternate_route_id: string | null;
+  }>;
+}
+
+export interface TranscriptEvent {
+  id?: number;
+  run_id?: string;
+  event_type: string;
+  sim_time: number;
+  agent_id: string | null;
+  agent_type: string;
+  payload: Record<string, any>;
+}
+
+/** Live world snapshot for the Mission Control console. */
+export const getWorldSnapshot = async (simulationId: string): Promise<WorldSnapshot> => {
+  const response = await api.get(`/simulations/${simulationId}/snapshot`);
+  return response.data.snapshot || response.data;
+};
+
+/** Incremental transcript fetch (events after a given id). */
+export const getEvents = async (
+  simulationId: string,
+  afterId = 0,
+  runId?: string
+): Promise<{ run_id: string | null; events: TranscriptEvent[] }> => {
+  const response = await api.get(`/simulations/${simulationId}/events`, {
+    params: { after_id: afterId, ...(runId ? { run_id: runId } : {}) },
+  });
+  return response.data;
+};
+
+/** Run history from Supabase. */
+export const getHistory = async (): Promise<Record<string, any>[]> => {
+  const response = await api.get('/history');
+  return response.data.simulations || [];
 };
 
 export default api;

@@ -1,16 +1,22 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import Dashboard from './pages/Dashboard';
-import Simulation from './pages/Simulation';
+import Landing from '@/pages/Landing';
+import NewEmergency from '@/pages/NewEmergency';
+import MissionControl from '@/pages/MissionControl';
+import ReportPage from '@/pages/ReportPage';
+import HistoryPage from '@/pages/HistoryPage';
 
-function App() {
+export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/simulation/:id" element={<Simulation />} />
-      </Routes>
+      <div className="min-h-screen bg-void text-ink">
+        <Routes>
+          <Route path="/" element={<Landing />} />
+          <Route path="/new" element={<NewEmergency />} />
+          <Route path="/run/:simId" element={<MissionControl />} />
+          <Route path="/report/:simId" element={<ReportPage />} />
+          <Route path="/history" element={<HistoryPage />} />
+        </Routes>
+      </div>
     </BrowserRouter>
   );
 }
-
-export default App;
